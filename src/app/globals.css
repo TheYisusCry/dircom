@@ -1,0 +1,131 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-jakarta), Arial, sans-serif;
+  --color-forest: #439441;
+  --color-forest-light: #439441;
+  --color-forest-ink: #2c6d2b;
+  --color-on-forest: #071807;
+  --color-ink: #162b3d;
+  --color-muted: #5d6a7b;
+  --color-mint: #edf7ed;
+  --color-mist: #f3f6f3;
+  --color-line: #e5ece5;
+}
+
+:root {
+  color-scheme: light;
+}
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 105px;
+}
+body {
+  background: #f7f8f4;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+button:not(:disabled),
+a,
+select {
+  cursor: pointer;
+}
+::selection {
+  background: #d2e5cc;
+  color: #2c6d2b;
+}
+:focus-visible {
+  outline: 3px solid #439441;
+  outline-offset: 4px;
+}
+dialog:focus {
+  outline: none;
+}
+.skip-link {
+  position: fixed;
+  top: -100px;
+  left: 16px;
+  z-index: 100;
+  border-radius: 8px;
+  background: #439441;
+  color: #071807;
+  padding: 12px 20px;
+}
+.skip-link:focus {
+  top: 12px;
+}
+.rounded-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-family: var(--font-rounded-icons);
+  font-weight: 500;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-feature-settings: "liga";
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+.illustrated-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  font-family:
+    "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  font-style: normal;
+  font-weight: normal;
+  line-height: 1.2;
+  user-select: none;
+}
+.podium-step {
+  position: relative;
+  transform-origin: bottom;
+  animation: podium-rise 550ms ease-out both;
+  box-shadow: inset -7px 0 0 rgb(0 0 0 / 5%);
+}
+.podium-step::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 9px;
+  border-radius: 10px 10px 0 0;
+  background: rgb(255 255 255 / 25%);
+}
+@keyframes podium-rise {
+  from {
+    opacity: 0;
+    transform: scaleY(0.88) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1) translateY(0);
+  }
+}
+@layer components {
+  .panel {
+    border-radius: 20px;
+    border-width: 1px;
+    border-color: var(--color-line);
+    background: white;
+    box-shadow: 0 3px 16px rgb(22 43 61 / 3%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
