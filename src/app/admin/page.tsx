@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Users, LockKeyhole } from "@/components/ui/icon";
+import { Users, LockKeyhole, PartyPopper } from "@/components/ui/icon";
 export default async function AdminPage() {
   await requireAdmin();
   const admin = createAdminClient();
@@ -15,6 +15,9 @@ export default async function AdminPage() {
       .select("id", { count: "exact", head: true })
       .eq("role", "employee")
       .eq("is_active", true),
+    admin
+      .from("birthday_celebrations")
+      .select("id", { count: "exact", head: true }),
   ]);
   if (counts.some((item) => item.error))
     throw new Error("No se pudo cargar la administración.");
@@ -26,7 +29,7 @@ export default async function AdminPage() {
       <p className="mt-2 text-sm text-muted">
         Gestiona las cuentas privadas y los datos de tu equipo.
       </p>
-      <div className="mt-7 grid gap-5 sm:grid-cols-2">
+      <div className="mt-7 grid gap-5 sm:grid-cols-3">
         <div className="panel p-6">
           <Users size={25} className="text-forest" />
           <p className="mt-4 text-3xl font-bold">{counts[0].count ?? 0}</p>
@@ -39,13 +42,28 @@ export default async function AdminPage() {
             Cuentas de empleados activas
           </p>
         </div>
+        <div className="panel p-6">
+          <PartyPopper size={25} className="text-forest" />
+          <p className="mt-4 text-3xl font-bold">{counts[2].count ?? 0}</p>
+          <p className="mt-2 text-sm text-muted">
+            Celebraciones programadas
+          </p>
+        </div>
       </div>
-      <Link
-        href="/admin/empleados"
-        className="mt-7 inline-flex min-h-11 items-center rounded-xl bg-forest px-5 py-3 text-sm font-bold text-on-forest"
-      >
-        Gestionar empleados →
-      </Link>
+      <div className="mt-7 flex flex-wrap gap-4">
+        <Link
+          href="/admin/empleados"
+          className="inline-flex min-h-11 items-center rounded-xl bg-forest px-5 py-3 text-sm font-bold text-on-forest"
+        >
+          Gestionar empleados →
+        </Link>
+        <Link
+          href="/admin/cumpleanos"
+          className="inline-flex min-h-11 items-center rounded-xl border border-line bg-white px-5 py-3 text-sm font-bold text-ink hover:bg-mist"
+        >
+          Gestionar cumpleaños →
+        </Link>
+      </div>
     </>
   );
 }

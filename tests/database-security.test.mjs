@@ -28,6 +28,7 @@ test("migraciones y permisos en PostgreSQL local", async (t) => {
     "202610130002_avatars.sql",
     "202610130003_admin_password.sql",
     "202610130004_server_avatar_reads.sql",
+    "202610300001_birthdays.sql",
   ])
     await db.exec(
       await readFile(
@@ -537,6 +538,36 @@ test("migraciones y permisos en PostgreSQL local", async (t) => {
         ).rows[0].allowed,
         false,
       );
+    },
+  );
+  await t.test(
+    "celebraciones de cumpleanos: lectura para miembros activos y escritura protegida",
+    async () => {
+      const emp1 = await account("bday1");
+      const sid1 = await session(emp1);
+      const emp2 = await account("bday2");
+      const celId = randomUUID();
+      await db.query(
+        "insert into public.birthday_celebrations(id, employee_id, title, invitation, starts_at, location) values($1, $2, 'Festejo bday2', 'Invitacion test', now() + interval '2 days', 'Oficina')",
+        [celId, emp2],
+      );
+      await asUser(emp1, sid1, async () => {
+        const rows = (await db.query("select * from public.birthday_celebrations")).rows;
+        assert.equal(rows.length, 1);
+        assert.equal(rows[0].title, "Festejo bday2");
+        await assert.rejects(
+          db.query(
+            "insert into public.birthday_celebrations(employee_id, title, invitation, starts_at, location) values($1, 'Hacked', 'Hack', now(), 'Nowhere')",
+            [emp1],
+          ),
+        );
+      });
+      // Inactive employee celebration is hidden
+      await db.query("update public.profiles set is_active=false where id=$1", [emp2]);
+      await asUser(emp1, sid1, async () => {
+        const rows = (await db.query("select * from public.birthday_celebrations")).rows;
+        assert.equal(rows.length, 0);
+      });
     },
   );
 });

@@ -90,3 +90,85 @@ export function getNextBirthday(
   );
   return { ...next, celebration };
 }
+
+/** Resolves current date and month in the official office timezone (Bolivia). */
+export function getOfficeCurrentDate(): {
+  todayIso: string;
+  currentMonth: number;
+  currentYear: number;
+} {
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: OFFICE_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const parts = formatter.formatToParts(now);
+  const year = Number(parts.find((p) => p.type === "year")?.value);
+  const month = Number(parts.find((p) => p.type === "month")?.value);
+  const day = Number(parts.find((p) => p.type === "day")?.value);
+  const todayIso = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  return { todayIso, currentMonth: month, currentYear: year };
+}
+
+/** Filters and sorts active employees who have their birthday in the given month. */
+export function getBirthdaysOfMonth(
+  employees: readonly Employee[],
+  month: number,
+): Employee[] {
+  return employees
+    .filter((e) => e.birthday.month === month)
+    .sort((a, b) => a.birthday.day - b.birthday.day);
+}
+
+/** Converts a database profile into the presentation Employee model. Returns null if birthday is incomplete. */
+export function profileToEmployee(profile: {
+  id: string;
+  first_name: string;
+  last_name: string;
+  job_title?: string | null;
+  birthday_day?: number | null;
+  birthday_month?: number | null;
+  avatar_path?: string | null;
+}): Employee | null {
+  if (
+    profile.birthday_day === null ||
+    profile.birthday_day === undefined ||
+    profile.birthday_month === null ||
+    profile.birthday_month === undefined
+  ) {
+    return null;
+  }
+  return {
+    id: profile.id,
+    name: `${profile.first_name} ${profile.last_name}`.trim(),
+    role: profile.job_title || "Equipo DIRCOM",
+    photo: profile.avatar_path ? `/api/avatars/${profile.id}` : undefined,
+    birthday: {
+      day: profile.birthday_day,
+      month: profile.birthday_month,
+    },
+  };
+}
+
+/** Maps a database celebration row to the presentation BirthdayCelebration model. */
+export function celebrationRowToCelebration(row: {
+  id: string;
+  employee_id: string;
+  title: string;
+  invitation: string;
+  starts_at: string;
+  location: string;
+  image_url?: string | null;
+}): BirthdayCelebration {
+  return {
+    id: row.id,
+    employeeId: row.employee_id,
+    title: row.title,
+    invitation: row.invitation,
+    image: row.image_url || "/images/celebration.jpg",
+    startsAt: row.starts_at,
+    location: row.location,
+  };
+}

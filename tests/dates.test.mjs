@@ -5,6 +5,10 @@ import {
   formatCalendarDate,
   formatEventDate,
   formatTime,
+  getOfficeCurrentDate,
+  getBirthdaysOfMonth,
+  profileToEmployee,
+  celebrationRowToCelebration,
 } from "../src/lib/dates.ts";
 
 const employee = (id, day, month) => ({
@@ -98,4 +102,66 @@ test("lista vacía y fechas inválidas tienen resultados explícitos", () => {
     RangeError,
   );
   assert.throws(() => getNextBirthday([], [], "2026-02-30"), RangeError);
+});
+
+test("getOfficeCurrentDate devuelve fecha valida de Bolivia", () => {
+  const current = getOfficeCurrentDate();
+  assert.match(current.todayIso, /^\d{4}-\d{2}-\d{2}$/);
+  assert.ok(current.currentMonth >= 1 && current.currentMonth <= 12);
+  assert.ok(current.currentYear >= 2026);
+});
+
+test("getBirthdaysOfMonth filtra y ordena por dia", () => {
+  const emps = [
+    employee("Pedro", 24, 10),
+    employee("Mía", 5, 10),
+    employee("Lucía", 18, 3),
+  ];
+  const oct = getBirthdaysOfMonth(emps, 10);
+  assert.equal(oct.length, 2);
+  assert.equal(oct[0].id, "Mía");
+  assert.equal(oct[1].id, "Pedro");
+  const march = getBirthdaysOfMonth(emps, 3);
+  assert.equal(march.length, 1);
+  assert.equal(march[0].id, "Lucía");
+});
+
+test("profileToEmployee y celebrationRowToCelebration adaptan modelos", () => {
+  assert.equal(
+    profileToEmployee({
+      id: "u1",
+      first_name: "Test",
+      last_name: "User",
+      birthday_day: null,
+      birthday_month: null,
+    }),
+    null,
+  );
+  const emp = profileToEmployee({
+    id: "u1",
+    first_name: "Test",
+    last_name: "User",
+    job_title: "Diseñador",
+    birthday_day: 15,
+    birthday_month: 6,
+    avatar_path: "u1/avatar.webp",
+  });
+  assert.deepEqual(emp, {
+    id: "u1",
+    name: "Test User",
+    role: "Diseñador",
+    photo: "/api/avatars/u1",
+    birthday: { day: 15, month: 6 },
+  });
+  const cel = celebrationRowToCelebration({
+    id: "c1",
+    employee_id: "u1",
+    title: "¡Festejo!",
+    invitation: "Todos invitados",
+    starts_at: "2026-06-15T16:00:00-04:00",
+    location: "Sala A",
+    image_url: null,
+  });
+  assert.equal(cel.image, "/images/celebration.jpg");
+  assert.equal(cel.employeeId, "u1");
 });

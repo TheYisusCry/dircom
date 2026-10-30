@@ -27,6 +27,17 @@ export type ProfileFields = Pick<
   Profile,
   "first_name" | "last_name" | "job_title" | "birthday_day" | "birthday_month"
 >;
+export type BirthdayCelebrationRow = {
+  id: string;
+  employee_id: string;
+  title: string;
+  invitation: string;
+  starts_at: string;
+  location: string;
+  image_url: string | null;
+  created_at: string;
+  updated_at: string;
+};
 export interface ActionState {
   status: "idle" | "error" | "success";
   message: string;
@@ -50,6 +61,20 @@ export type Database = {
           >;
         Update: Partial<Profile>;
         Relationships: [];
+      };
+      birthday_celebrations: {
+        Row: BirthdayCelebrationRow;
+        Insert: Omit<BirthdayCelebrationRow, "id" | "created_at" | "updated_at"> &
+          Partial<Pick<BirthdayCelebrationRow, "id" | "created_at" | "updated_at">>;
+        Update: Partial<BirthdayCelebrationRow>;
+        Relationships: [
+          {
+            foreignKeyName: "birthday_celebrations_employee_id_fkey";
+            columns: ["employee_id"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
     };
     Views: { employee_directory: { Row: DirectoryProfile; Relationships: [] } };
