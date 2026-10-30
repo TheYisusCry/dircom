@@ -6,7 +6,7 @@ export function Avatar({
   size = 36,
   className = "",
 }: {
-  employee: Employee;
+  employee: Pick<Employee, "name" | "photo">;
   size?: number;
   className?: string;
 }) {
@@ -23,6 +23,7 @@ export function Avatar({
       {employee.photo ? (
         <Image
           src={employee.photo}
+          unoptimized={employee.photo.startsWith("/api/avatars/")}
           fill
           sizes={`${size}px`}
           alt={`Retrato de ${employee.name}`}

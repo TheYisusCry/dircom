@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Menu, X } from "@/components/ui/icon";
 
 const links = [
@@ -11,6 +12,7 @@ const links = [
 ];
 
 export function Navigation() {
+  const isDashboard = usePathname() === "/";
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState("#inicio");
   useEffect(() => {
@@ -51,8 +53,10 @@ export function Navigation() {
         {links.map(({ href, label }) => (
           <a
             key={href}
-            href={href}
-            aria-current={active === href ? "location" : undefined}
+            href={isDashboard ? href : `/${href}`}
+            aria-current={
+              isDashboard && active === href ? "location" : undefined
+            }
             onClick={() => {
               setActive(href);
               setOpen(false);

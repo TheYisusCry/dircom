@@ -1,93 +1,101 @@
 # DIRCOM
 
-Primera etapa de una plataforma social interna para 12 empleados y un administrador. Dashboard en español con datos ficticios, sin autenticación, conexión a Supabase ni votaciones funcionales. No se ha publicado ni desplegado.
+Plataforma privada de equipo. La etapa 2 incorpora Supabase Auth, PostgreSQL y fotografías privadas, conservando el dashboard, Plus Jakarta Sans, los iconos locales y el verde `#439441`.
 
-## Ejecutar localmente
+El usuario del header y del saludo procede de la sesión real. Cumpleaños destacados, reconocimientos, votaciones y actividades siguen utilizando los ejemplos de la etapa 1 y están identificados como demostrativos. No se ha implementado la etapa 3 ni desplegado la aplicación.
 
-Requisitos: Node.js **22.18 o posterior** y npm. Desde esta carpeta:
+## Preparación y ejecución
+
+Requisitos: Node.js **22.18 o posterior**, npm y un proyecto Supabase dedicado a DIRCOM. Desde esta carpeta:
 
 ```powershell
 npm ci
+Copy-Item .env.example .env.local
+```
+
+Completa `.env.local` con los valores reales del proyecto:
+
+- `NEXT_PUBLIC_SUPABASE_URL`: URL del proyecto, desde **Connect**.
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: clave pública del mismo proyecto.
+- `SUPABASE_SERVICE_ROLE_KEY`: clave privada de servidor. El nombre previsto se conserva; acepta una clave actual `sb_secret_...` o una `service_role` heredada.
+
+No publiques `.env.local` ni compartas la clave privada en el chat. La plantilla tiene valores vacíos; no hay conexión ni usuarios precargados.
+
+**Sigue [la guía de Supabase](docs/SUPABASE_SETUP.md)** para desactivar el registro público, ejecutar las migraciones en orden, verificar Storage y crear el administrador. Después:
+
+```powershell
 npm run dev
 ```
 
-Abre http://localhost:3000. Si ese puerto está ocupado, utiliza la dirección que imprima Next.js.
+Abre `http://localhost:3000/login`. Reinicia el servidor después de cambiar variables. Sin configuración, el login informa que el acceso está en preparación y sus controles quedan deshabilitados; no simula una sesión.
+
+Para crear el primer administrador, configura temporalmente `DIRCOM_ADMIN_USERNAME`, `DIRCOM_ADMIN_PASSWORD`, `DIRCOM_ADMIN_FIRST_NAME` y `DIRCOM_ADMIN_LAST_NAME` y ejecuta:
+
+```powershell
+npm run bootstrap:admin
+```
+
+Retira esas cuatro variables cuando termine. El proceso manual se niega a crear un segundo administrador y no tiene endpoint HTTP. La guía incluye recuperación de emergencia de la cuenta principal desde un entorno confiable.
+
+Ese archivo se utiliza únicamente para crear la primera cuenta. Después, las contraseñas de empleados se asignan desde **Administración → Empleados** y la del administrador desde **Administración → Mi cuenta**. Las contraseñas admiten 6–64 caracteres sin exigir mayúsculas, números ni símbolos (máximo 72 bytes por compatibilidad con Auth).
+
+## Funciones disponibles
+
+- `/login`: usuario y contraseña, errores genéricos, carga y limitación persistente de intentos.
+- `/`: dashboard privado, perfil real, foto o avatar, cargo y cierre de sesión.
+- `/admin`: resumen real de cuentas, visible únicamente para el administrador.
+- `/admin/empleados`: lista paginada, alta, edición de nombre/cargo/cumpleaños/foto, contraseña nueva y activación/desactivación. No hay límite fijo de 12 cuentas.
+- `/admin/cuenta`: el administrador cambia su propia contraseña desde el panel y vuelve a iniciar sesión con la nueva.
+- `/acceso-denegado`: respuesta para empleados que intentan acceder al panel.
+- `/api/avatars/[id]`: fotografías comprobando la sesión, sin caché pública.
+
+Los empleados pueden consultar los campos públicos internos de perfiles activos, pero no modificarlos. No hay registro público, recuperación por correo ni cambio de contraseña por empleados. Los identificadores, usernames y roles son inmutables. La cuenta administradora principal no puede desactivarse ni eliminarse mediante estas operaciones.
+
+## Arquitectura y archivos
+
+```text
+src/app/login/                 Login y cierre de sesión mediante Server Actions
+src/app/admin/                 Rutas y acciones administrativas protegidas
+src/app/api/avatars/[id]/      Descarga privada de fotos
+src/components/auth/          Formulario de login
+src/components/admin/         Tabla, tarjetas móviles y formularios
+src/lib/supabase/              Configuración, cliente SSR y cliente administrativo
+src/lib/auth/                  Sesión, validación, fotos y compensación de altas
+src/proxy.ts                  Renovación SSR y protección inicial de rutas
+src/types/database.ts         Tipos de perfiles, roles, RPC y acciones
+supabase/migrations/          Perfiles, permisos, protección Auth y Storage
+scripts/bootstrap-admin.mjs   Creación manual de la cuenta principal
+scripts/recover-admin.mjs     Recuperación con permiso previo emitido en SQL
+tests/                        Validación, fechas, PostgreSQL y pruebas reales optativas
+```
+
+Next.js 16.4 App Router, React 19.3, TypeScript estricto, Tailwind 4, Motion, `@supabase/ssr` 0.12.7, `@supabase/supabase-js` 2.117.3 y Sharp. Las fuentes se sirven localmente. El dashboard conserva los modales accesibles, navegación móvil, podio 2–1–3, celebración y estados de votación de ejemplo. Las fotografías demostrativas deben sustituirse por imágenes autorizadas del equipo cuando se conecten esos módulos.
+
+## Seguridad
+
+Auth conserva y verifica las contraseñas; `profiles` nunca las contiene. El backend resuelve usernames a identidades técnicas aleatorias sin exponer un directorio de correos. Los clientes SSR verifican `getClaims()` y después consultan el perfil y la sesión vigentes en PostgreSQL. Las cookies son HttpOnly, SameSite=Lax y Secure en producción. No se guarda manualmente ningún token en localStorage; no se necesita un cliente Auth de navegador porque el acceso funciona mediante acciones de servidor.
+
+Las operaciones administrativas vuelven a comprobar el rol en el servidor. El cliente privado usa `server-only`; los roles de cliente carecen de permisos de escritura. RLS y permisos por columna permiten únicamente los datos internos necesarios. Los helpers `SECURITY DEFINER` tienen `search_path` fijo y se encuentran en `dircom_private`, que debe permanecer fuera de la Data API. Las funciones públicas son wrappers con permisos explícitos.
+
+Desactivar o restablecer una contraseña invalida el acceso de sesiones anteriores mediante un corte temporal en la base de datos, además del bloqueo de Auth cuando corresponde. El JWT puede seguir siendo criptográficamente válido hasta su expiración; las políticas y la aplicación ya rechazan su acceso. Reactivar exige una nueva sesión.
+
+Una restricción diferida de PostgreSQL impide cambiar contraseñas directamente a través de Auth sin un permiso administrativo de un solo uso. **Este control depende del comportamiento transaccional de Supabase Auth y requiere probarse en la instancia real antes de producción y después de actualizar Auth.** También bloquea cambios automáticos del hash por futuras migraciones de Auth; consulta las limitaciones de la guía.
+
+Las fotos admiten JPEG, PNG y WebP de hasta 3 MiB. El servidor decodifica, valida, orienta y convierte a WebP, elimina metadatos y organiza archivos por UUID. El bucket es privado y solo el backend accede a los archivos. Los empleados ven las imágenes de perfiles activos mediante `/api/avatars/[id]`, que comprueba la sesión en cada solicitud y evita caché pública. No tienen permisos de descarga directa ni de subida a Storage.
+
+## Validación
 
 ```powershell
 npm run lint
 npm run typecheck
 npm test
 npm run build
-npm start
 ```
 
-`npm start` sirve el último build de producción. En el entorno aislado de Windows, SWC puede requerir ejecutar la compilación con permisos normales de la cuenta para resolver rutas de OneDrive.
+Las pruebas locales comprueban fechas, usernames, fortaleza de contraseña, campos editables, recuperación ante altas parciales, RLS y permisos en PostgreSQL real mediante PGlite. El esquema Auth/Storage de esa prueba es una representación local: no sustituye las llamadas HTTP a Supabase.
 
-## Tecnologías
+La suite real está en `tests/live/supabase.test.mjs`. Se activa expresamente en **staging**, crea un empleado temporal y elimina solo sus propios registros al terminar. Configuración y pruebas manuales de rutas en [la guía](docs/SUPABASE_SETUP.md#7-validación-con-supabase-real).
 
-Next.js 16.4 (App Router), React 19.3, TypeScript estricto, Tailwind CSS 4 y Motion. Plus Jakarta Sans variable se sirve localmente mediante `next/font/local`, desde el paquete Fontsource. Los iconos usan Material Symbols Rounded en una fuente local de 13 KB, junto con emojis a color para los elementos de celebración. No requieren peticiones a Google Fonts en ejecución o compilación. Las dependencias añadidas tienen versiones exactas y `package-lock.json` fija el árbol completo.
+El resultado de conectar el proyecto real y los pasos todavía pendientes se registran en [SETUP_STATUS.md](docs/SETUP_STATUS.md). Las comprobaciones de configuración no sustituyen las pruebas de login, operaciones administrativas y fotografías. `npm start` sirve el build de producción por HTTPS detrás de un proxy; para desarrollo local utiliza `npm run dev`.
 
-## Estructura
-
-```text
-src/
-  app/                 Página principal, layout, estilos y favicon SVG
-  assets/fonts/        Fuente local de iconos y licencia
-  components/
-    layout/            Header, navegación responsive y contenedor
-    birthdays/         Cumpleaños destacado e invitación
-    employees/         Reconocimiento semanal
-    voting/            Podio y cinco estados de presentación
-    activities/        Tablero, tarjetas, mensajes y vista de formulario
-    ui/                Iconos, botón, avatar, modal, encabezado y estado vacío
-  data/mock-data.ts    Única fuente de los datos ficticios
-  lib/dates.ts         Fechas recurrentes y formato en español
-  types/index.ts       Modelos de presentación tipados
-public/images/         Fotografías locales de muestra
-tests/dates.test.mjs    Casos relevantes del calendario
-```
-
-La página, el layout y los bloques estáticos son Server Components. Los Client Components se limitan a navegación, modales, saludo por horario y selección de estados de ejemplo. Los componentes reciben modelos de presentación; no dependen de un cliente de base de datos.
-
-El saludo inicial recibe el mismo perfil de ejemplo que el header mediante `UserGreeting`. Después de hidratar, utiliza la hora real en Bolivia: buenos días de 06:00 a 11:59, buenas tardes de 12:00 a 18:59 y buenas noches el resto del día. Se actualiza cada minuto. El HTML inicial usa un saludo neutro para evitar diferencias entre servidor y navegador. En la etapa de autenticación, el perfil se sustituirá por el usuario de la sesión. La identidad utiliza `#439441` como verde principal y variantes de texto con mayor contraste para las etiquetas pequeñas.
-
-La composición visual utiliza tarjetas claras sobre un fondo cálido, saludo en una banda verde suave y cumpleaños en una tarjeta horizontal con fotografía y panel de fecha. El reconocimiento muestra al ganador sin motivo ni cita. El Top 3 combina fotografías, corona, medallas y un podio con alturas distintas en orden visual 2–1–3. La entrada del podio respeta la preferencia de movimiento reducido. Las actividades muestran los mensajes en bloques de conversación. En móvil, los paneles se apilan y la navegación se convierte en menú.
-
-## Interacciones disponibles
-
-- Navegación por secciones, menú móvil y enlace para saltar al contenido.
-- Apertura y cierre de invitación, conversaciones y formulario de ejemplo.
-- Modales con `dialog` nativo, navegación por teclado, Escape, cierre al pulsar fuera, foco contenido y retorno al control original. El scroll del documento se bloquea mientras están abiertos.
-- Exploración de votación programada, abierta, voto registrado, finalizada y resultado publicado. Cambiar la vista no emite votos.
-- Animación discreta de apertura que respeta la preferencia de movimiento reducido.
-
-Los formularios de publicación y mensajes están deshabilitados e indican qué integración requieren. No hay simulaciones de guardado, contadores de participación, estadísticas administrativas ni registros públicos. El perfil del header también es ficticio.
-
-## Datos y fechas
-
-El calendario de ejemplo representa el **13 de octubre de 2026**, mediante `DEMO_DATE`; es una instantánea fija. El saludo utiliza la hora real, mientras los cumpleaños, eventos y rondas siguen siendo datos ficticios. Para sustituirlos, edita `src/data/mock-data.ts`. Hay 12 empleados ficticios. Los retratos son fotografías de muestra y no representan empleados reales.
-
-`Employee.birthday` contiene exclusivamente día y mes. `BirthdayCelebration` contiene empleado asociado, título, invitación larga, imagen opcional, lugar e instante ISO con zona horaria. El cumpleaños de Mía es el **18 de octubre**; su celebración es el **16 de octubre de 2026 a las 17:00, hora de Bolivia**.
-
-`getNextBirthday` selecciona exactamente una persona, incluye cumpleaños de hoy, contempla el siguiente año y mantiene un orden estable en empates. Solo asocia celebraciones del año correspondiente en `America/La_Paz`. Si no encuentra una, la invitación muestra que está por programar y no inventa lugar ni horario. Por ahora, el 29 de febrero se interpreta como el próximo 29 de febrero real; antes de producción se deberá acordar cómo celebrarlo en años no bisiestos.
-
-## Próxima etapa con Supabase
-
-Pendiente, sin implementar automáticamente:
-
-- Autenticación por invitación, sin registro público; usuarios, roles y perfiles.
-- PostgreSQL: empleados, celebraciones anuales separadas, rondas, votos, resultados, actividades y mensajes.
-- Políticas RLS y operaciones de servidor para validar permisos. El anonimato de los votos debe preservarse en el acceso a datos, además de la interfaz.
-- Restricciones de voto único por empleado y ronda, impedir voto propio, excluir al administrador, apertura/cierre y rondas por empate.
-- Storage para fotografías e invitaciones, con acceso privado.
-- Administración separada, gestión de empleados, historial y estadísticas solo para administrador.
-- Sincronización de la revelación y podio animado, una vez definida la lógica del backend.
-- Persistencia de actividades y mensajes; cierre y eliminación por creador o administrador.
-
-No se incluye cliente Supabase ni variables de entorno porque esta etapa no los usa. Cuando corresponda, configura secretos de servidor y políticas de acceso antes de desplegar en Vercel. `robots: noindex` evita indexación; la privacidad real dependerá de la autenticación y de las políticas RLS.
-
-## Recursos visuales y dependencias
-
-La identidad y la composición reinterpretan el HTML de Stitch proporcionado. Las fotografías de Mía, Pedro, Ismael y la celebración proceden de Unsplash; la de Lucía procede de la referencia entregada. Sustituir todas por imágenes autorizadas del equipo antes de producción. Plus Jakarta Sans se distribuye bajo OFL a través de Fontsource.
-
-La revisión inicial de npm informó cinco alertas de severidad alta en la cadena de desarrollo `eslint-config-next → fast-glob → micromatch → braces`. El registro consultado aún ofrece `braces@3.0.3` como versión estable y propone bajar ESLint de Next a 14; se conserva la configuración compatible de Next 16. No se aplica `npm audit fix --force`. Estas alertas deben revisarse cuando exista una versión compatible corregida.
+La revisión de dependencias conserva cinco avisos altos en la cadena de herramientas de desarrollo `eslint-config-next → fast-glob → micromatch → braces`, sin una corrección compatible disponible durante la revisión. No se ha aplicado `npm audit fix --force`.

@@ -14,19 +14,27 @@ import {
   activities,
   celebrations,
   DEMO_DATE,
-  demoProfile,
   employees,
   recognition,
 } from "@/data/mock-data";
 import { getNextBirthday } from "@/lib/dates";
+import { requireProfile } from "@/lib/auth/session";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+export default async function Home() {
+  const profile = await requireProfile();
   const birthday = getNextBirthday(employees, celebrations, DEMO_DATE);
   return (
     <>
-      <Header />
+      <Header profile={profile} />
       <MainContainer>
-        <UserGreeting profile={demoProfile} />
+        <UserGreeting
+          profile={{ name: `${profile.first_name} ${profile.last_name}` }}
+        />
+        <p className="mb-5 text-[11px] text-muted">
+          El perfil es real. Cumpleaños, reconocimientos y actividades aún
+          contienen datos de ejemplo.
+        </p>
         <section id="cumpleanos" aria-labelledby="birthday-heading">
           <SectionHeading
             id="birthday-heading"

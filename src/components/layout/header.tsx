@@ -1,13 +1,18 @@
-import { demoProfile } from "@/data/mock-data";
+import Link from "next/link";
+import type { Profile } from "@/types/database";
+import { avatarUrl } from "@/lib/auth/validation";
+import { logoutAction } from "@/app/login/actions";
+import { ArrowRight } from "@/components/ui/icon";
 import { Avatar } from "@/components/ui/avatar";
 import { Navigation } from "./navigation";
 
-export function Header() {
+export function Header({ profile }: { profile: Profile }) {
+  const name = `${profile.first_name} ${profile.last_name}`;
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-white">
-      <div className="relative mx-auto flex h-[72px] max-w-[1240px] items-center justify-between gap-4 px-5 sm:px-8">
-        <a
-          href="#inicio"
+      <div className="relative mx-auto flex h-[72px] max-w-[1240px] items-center justify-between gap-2 px-4 sm:gap-4 sm:px-8">
+        <Link
+          href="/#inicio"
           aria-label="DIRCOM · Inicio"
           className="flex shrink-0 items-center gap-2.5"
         >
@@ -34,16 +39,37 @@ export function Header() {
           <span className="text-xl font-extrabold tracking-[-0.04em] text-forest">
             DIRCOM<span className="text-forest-light">.</span>
           </span>
-        </a>
+        </Link>
         <div className="order-3 lg:order-0">
           <Navigation />
         </div>
-        <div className="ml-auto flex items-center gap-2.5 border-l border-line pl-4 lg:ml-0">
-          <Avatar employee={demoProfile} size={36} />
+        <div className="ml-auto flex items-center gap-1.5 pl-1 sm:gap-2.5 sm:border-l sm:border-line sm:pl-4 lg:ml-0">
+          <Avatar employee={{ name, photo: avatarUrl(profile) }} size={36} />
           <div className="hidden sm:block">
-            <p className="text-xs font-bold">Valeria M.</p>
-            <p className="mt-1 text-[10px] text-muted">Perfil de ejemplo</p>
+            <p className="max-w-32 truncate text-xs font-bold" title={name}>
+              {name}
+            </p>
+            <p className="mt-1 max-w-32 truncate text-[10px] text-muted">
+              {profile.job_title ||
+                (profile.role === "admin" ? "Administrador" : "Equipo DIRCOM")}
+            </p>
           </div>
+          {profile.role === "admin" && (
+            <Link href="/admin" className="admin-link">
+              Panel
+            </Link>
+          )}
+          <form action={logoutAction}>
+            <button
+              type="submit"
+              aria-label="Cerrar sesión"
+              title="Cerrar sesión"
+              className="flex min-h-11 items-center gap-2 rounded-lg px-2 text-xs font-semibold text-forest-ink hover:bg-mint"
+            >
+              <ArrowRight size={18} />
+              <span className="hidden xl:inline">Salir</span>
+            </button>
+          </form>
         </div>
       </div>
     </header>
