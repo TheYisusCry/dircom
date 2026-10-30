@@ -29,6 +29,8 @@ test("migraciones y permisos en PostgreSQL local", async (t) => {
     "202610130003_admin_password.sql",
     "202610130004_server_avatar_reads.sql",
     "202610300001_birthdays.sql",
+    "202610300002_voting.sql",
+    "202610300003_activities.sql",
   ])
     await db.exec(
       await readFile(
@@ -567,6 +569,136 @@ test("migraciones y permisos en PostgreSQL local", async (t) => {
       await asUser(emp1, sid1, async () => {
         const rows = (await db.query("select * from public.birthday_celebrations")).rows;
         assert.equal(rows.length, 0);
+      });
+    },
+  );
+  await t.test(
+    "votacion semanal: voto unico, anonimo, sin auto-voto ni participacion de admin",
+    async () => {
+      const adminRow = (
+        await db.query(
+          "select id from public.profiles where role = 'admin' limit 1",
+        )
+      ).rows[0];
+      const adminId = adminRow.id;
+      const adminSid = await session(adminId);
+      const voter1 = await account("voter1");
+      const voter1Sid = await session(voter1);
+      const voter2 = await account("voter2");
+      const voter2Sid = await session(voter2);
+      const roundId = randomUUID();
+
+      // Create an open voting round of 15 minutes
+      await db.query(
+        "insert into public.voting_rounds(id, title, week_label, status, opens_at, closes_at) values($1, 'Empleado de la semana', 'Semana 1', 'open', now(), now() + interval '15 minutes')",
+        [roundId],
+      );
+
+      // 1. voter1 votes for voter2: success
+      await asUser(voter1, voter1Sid, async () => {
+        const res = await db.query(
+          "select dircom_private.cast_vote($1, $2) as voted",
+          [roundId, voter2],
+        );
+        assert.equal(res.rows[0].voted, true);
+      });
+
+      // 2. voter1 tries to vote again in the same round: rejected
+      await asUser(voter1, voter1Sid, async () => {
+        await assert.rejects(
+          db.query("select dircom_private.cast_vote($1, $2)", [roundId, voter2]),
+          /Ya has emitido tu voto/,
+        );
+      });
+
+      // 3. voter2 tries to vote for himself: rejected
+      await asUser(voter2, voter2Sid, async () => {
+        await assert.rejects(
+          db.query("select dircom_private.cast_vote($1, $2)", [roundId, voter2]),
+          /No puedes votar por ti mismo/,
+        );
+      });
+
+      // 4. Admin tries to vote: rejected
+      await asUser(adminId, adminSid, async () => {
+        await assert.rejects(
+          db.query("select dircom_private.cast_vote($1, $2)", [roundId, voter1]),
+          /Solo los empleados activos pueden votar/,
+        );
+      });
+
+      // 5. voter2 tries to vote for admin: rejected
+      await asUser(voter2, voter2Sid, async () => {
+        await assert.rejects(
+          db.query("select dircom_private.cast_vote($1, $2)", [roundId, adminId]),
+          /El candidato seleccionado no es valido/,
+        );
+      });
+
+      // 6. Check anonymity and RLS
+      await asUser(voter1, voter1Sid, async () => {
+        // Can read their own ballot cast
+        const ballots = (await db.query("select * from public.voting_ballots_cast")).rows;
+        assert.equal(ballots.length, 1);
+        assert.equal(ballots[0].voter_id, voter1);
+
+        // Cannot read voting_votes (urna secreta)
+        await assert.rejects(
+          db.query("select * from public.voting_votes"),
+          /permission denied/,
+        );
+      });
+
+      // 7. Expired round: voting rejected
+      const expiredRoundId = randomUUID();
+      await db.query(
+        "insert into public.voting_rounds(id, title, week_label, status, opens_at, closes_at) values($1, 'Ronda pasada', 'Semana 0', 'open', now() - interval '30 minutes', now() - interval '15 minutes')",
+        [expiredRoundId],
+      );
+      await asUser(voter2, voter2Sid, async () => {
+        await assert.rejects(
+          db.query("select dircom_private.cast_vote($1, $2)", [expiredRoundId, voter1]),
+          /El tiempo para votar ha finalizado/,
+        );
+      });
+    },
+  );
+  await t.test(
+    "actividades rapidas: lectura para miembros activos y escritura protegida",
+    async () => {
+      const emp1 = await account("act_user1");
+      const sid1 = await session(emp1);
+      const emp2 = await account("act_user2");
+      const actId = randomUUID();
+      const msgId = randomUUID();
+
+      await db.query(
+        "insert into public.activities(id, title, category, description, creator_id, status) values($1, 'Pedido empanadas', 'food', 'Anotar pedidos', $2, 'open')",
+        [actId, emp2],
+      );
+      await db.query(
+        "insert into public.activity_messages(id, activity_id, author_id, text) values($1, $2, $3, '4 de pollo')",
+        [msgId, actId, emp2],
+      );
+
+      // Active member can read activities and messages
+      await asUser(emp1, sid1, async () => {
+        const acts = (await db.query("select * from public.activities")).rows;
+        assert.equal(acts.length, 1);
+        assert.equal(acts[0].title, "Pedido empanadas");
+
+        const msgs = (await db.query("select * from public.activity_messages")).rows;
+        assert.equal(msgs.length, 1);
+        assert.equal(msgs[0].text, "4 de pollo");
+
+        // Direct client insert without service_role is rejected
+        await assert.rejects(
+          db.query(
+            "insert into public.activities(title, category, description, creator_id) values('Hack', 'food', 'Test', $1)",
+            [emp1],
+          ),
+          /permission denied/,
+        );
       });
     },
   );

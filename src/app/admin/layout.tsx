@@ -25,6 +25,10 @@ export default async function AdminLayout({
             Cumpleaños
           </Link>
           <span className="text-line">/</span>
+          <Link href="/admin/votaciones" className="admin-link">
+            Votaciones
+          </Link>
+          <span className="text-line">/</span>
           <Link href="/admin/cuenta" className="admin-link">
             Mi cuenta
           </Link>

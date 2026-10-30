@@ -63,6 +63,12 @@ export default async function AdminPage() {
         >
           Gestionar cumpleaños →
         </Link>
+        <Link
+          href="/admin/votaciones"
+          className="inline-flex min-h-11 items-center rounded-xl border border-line bg-white px-5 py-3 text-sm font-bold text-ink hover:bg-mist"
+        >
+          Votaciones de la semana →
+        </Link>
       </div>
     </>
   );
