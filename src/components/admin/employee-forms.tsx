@@ -1,5 +1,5 @@
 "use client";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import {
   createEmployee,
   updateEmployee,
@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { FormFeedback } from "@/components/ui/form-feedback";
 import { MONTH_NAMES } from "@/lib/dates";
+import { Eye, EyeOff } from "@/components/ui/icon";
 
 export function EmployeeForm({
   employee,
@@ -30,6 +31,7 @@ export function EmployeeForm({
     birthday_day: employee?.birthday_day ? String(employee.birthday_day) : "",
     birthday_month: employee?.birthday_month ? String(employee.birthday_month) : "",
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [state, action, pending] = useActionState(
     employee ? updateEmployee : createEmployee,
     INITIAL_ACTION,
@@ -105,19 +107,30 @@ export function EmployeeForm({
             </label>
             <label className="form-label">
               Contraseña inicial
-              <input
-                name="password"
-                type="password"
-                required
-                minLength={6}
-                maxLength={64}
-                autoComplete="new-password"
-                value={formData.password}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, password: e.target.value }))
-                }
-                className="auth-input mt-2"
-              />
+              <div className="relative mt-2">
+                <input
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  minLength={6}
+                  maxLength={64}
+                  autoComplete="new-password"
+                  value={formData.password}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, password: e.target.value }))
+                  }
+                  className="auth-input pr-11"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
+                  title={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-muted transition hover:text-ink focus:outline-none"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
               <PasswordHint />
             </label>
           </>
@@ -235,6 +248,7 @@ export function PasswordResetForm({
   onCancel?: () => void;
 }) {
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [state, action, pending] = useActionState(
     resetEmployeePassword,
     INITIAL_ACTION,
@@ -251,18 +265,30 @@ export function PasswordResetForm({
       </p>
       <label className="form-label">
         Nueva contraseña
-        <input
-          name="password"
-          type="password"
-          required
-          minLength={6}
-          maxLength={64}
-          autoComplete="new-password"
-          disabled={pending}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="auth-input mt-2"
-        />
+        <div className="relative mt-2">
+          <input
+            name="password"
+            type={showPassword ? "text" : "password"}
+            required
+            minLength={6}
+            maxLength={64}
+            autoComplete="new-password"
+            disabled={pending}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="auth-input pr-11"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((prev) => !prev)}
+            disabled={pending}
+            aria-label={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
+            title={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
+            className="absolute inset-y-0 right-0 flex items-center px-3 text-muted transition hover:text-ink focus:outline-none"
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
         <PasswordHint />
       </label>
       <FormFeedback state={state} />
@@ -311,11 +337,41 @@ export function StatusForm({
         name="is_active"
         value={activate ? "true" : "false"}
       />
-      <p className="text-sm leading-7 text-muted">
-        {activate
-          ? "El empleado podrá volver a iniciar sesión con sus credenciales. Las sesiones antiguas seguirán bloqueadas."
-          : "El empleado perderá acceso a la aplicación y dejará de aparecer en el directorio interno activo. Se conservará su historial."}
-      </p>
+      {activate ? (
+        <>
+          <p className="text-sm leading-6 text-muted">
+            Estás por contratar nuevamente a{" "}
+            <strong className="text-ink">
+              {employee.first_name} {employee.last_name}
+            </strong>
+            . El empleado recuperará el acceso a DIRCOM con sus credenciales.
+          </p>
+          <label className="form-label">
+            Cargo / Puesto
+            <input
+              name="job_title"
+              defaultValue={employee.job_title ?? ""}
+              maxLength={100}
+              autoComplete="off"
+              disabled={pending}
+              placeholder="Ej. Especialista Web, Diseñador..."
+              className="auth-input mt-2"
+            />
+            <span className="mt-1 block text-[11px] font-normal text-muted">
+              Puedes confirmar el cargo actual o modificarlo antes de contratar.
+            </span>
+          </label>
+        </>
+      ) : (
+        <p className="text-sm leading-6 text-muted">
+          ¿Estás seguro de que deseas despedir a{" "}
+          <strong className="text-ink">
+            {employee.first_name} {employee.last_name}
+          </strong>
+          ? El empleado perderá acceso a la aplicación y dejará de aparecer en
+          el directorio interno activo. Se conservará su historial y registros previos.
+        </p>
+      )}
       <FormFeedback state={state} />
       <div className="flex items-center gap-3">
         {onCancel && (
@@ -335,10 +391,12 @@ export function StatusForm({
           className={onCancel ? "flex-1" : "w-full"}
         >
           {pending
-            ? "Actualizando…"
+            ? activate
+              ? "Contratando…"
+              : "Despidiendo…"
             : activate
-              ? "Reactivar empleado"
-              : "Desactivar empleado"}
+              ? "Contratar empleado"
+              : "Despedir empleado"}
         </Button>
       </div>
     </form>

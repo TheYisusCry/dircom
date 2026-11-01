@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "@/components/ui/icon";
 import { Avatar } from "@/components/ui/avatar";
@@ -55,18 +56,27 @@ export function Navigation({ profile }: { profile?: Profile }) {
         className={`${open ? "flex" : "hidden"} absolute inset-x-0 top-full z-40 flex-col gap-1.5 border-b border-t border-line bg-white p-4 shadow-xl lg:static lg:z-auto lg:flex lg:flex-row lg:border-0 lg:p-0 lg:shadow-none`}
       >
         {profile && (
-          <div className="mb-2 flex items-center gap-3 border-b border-line pb-3 lg:hidden">
-            <Avatar employee={{ name, photo: avatarUrl(profile) }} size={38} />
-            <div className="min-w-0">
-              <p className="truncate text-xs font-bold text-ink">{name}</p>
-              <p className="truncate text-[10px] text-muted">
-                {profile.job_title ||
-                  (profile.role === "admin"
-                    ? "Administrador"
-                    : "Equipo DIRCOM")}
-              </p>
+          <Link
+            href={profile.role === "admin" ? "/admin/cuenta" : "/perfil"}
+            onClick={() => setOpen(false)}
+            className="mb-2 flex items-center justify-between rounded-xl border border-line bg-mist/60 p-3 hover:bg-mist lg:hidden"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <Avatar employee={{ name, photo: avatarUrl(profile) }} size={38} />
+              <div className="min-w-0 text-left">
+                <p className="truncate text-xs font-bold text-ink">{name}</p>
+                <p className="truncate text-[10px] text-muted">
+                  {profile.job_title ||
+                    (profile.role === "admin"
+                      ? "Administrador"
+                      : "Equipo DIRCOM")}
+                </p>
+              </div>
             </div>
-          </div>
+            <span className="shrink-0 text-[11px] font-semibold text-forest-ink">
+              Ajustes →
+            </span>
+          </Link>
         )}
         {links.map(({ href, label }) => (
           <a

@@ -4,9 +4,15 @@ import { IllustratedIcon } from "@/components/ui/icon";
 import { getSessionProfile } from "@/lib/auth/session";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 export const dynamic = "force-dynamic";
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ resigned?: string }>;
+}) {
   const configured = isSupabaseConfigured();
   if (configured && (await getSessionProfile())) redirect("/");
+  const resolvedParams = searchParams ? await searchParams : {};
+  const hasResigned = resolvedParams.resigned === "1";
   return (
     <main
       id="contenido"
@@ -38,6 +44,11 @@ export default async function LoginPage() {
           <p className="mt-2 text-sm text-muted">
             Entra con tu usuario y contraseña.
           </p>
+          {hasResigned && (
+            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs text-amber-900">
+              Tu renuncia ha sido procesada correctamente y tu cuenta ha sido desactivada.
+            </div>
+          )}
           <LoginForm configured={configured} />
         </div>
       </div>

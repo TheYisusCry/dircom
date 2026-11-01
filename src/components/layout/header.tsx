@@ -44,19 +44,29 @@ export function Header({ profile }: { profile: Profile }) {
           <Navigation profile={profile} />
         </div>
         <div className="ml-auto flex items-center gap-1.5 pl-1 sm:gap-2.5 sm:border-l sm:border-line sm:pl-4 lg:ml-0">
-          <Avatar employee={{ name, photo: avatarUrl(profile) }} size={36} />
-          <div className="hidden sm:block">
-            <p className="max-w-32 truncate text-xs font-bold" title={name}>
-              {name}
-            </p>
-            <p className="mt-1 max-w-32 truncate text-[10px] text-muted">
-              {profile.job_title ||
-                (profile.role === "admin" ? "Administrador" : "Equipo DIRCOM")}
-            </p>
-          </div>
-          {profile.role === "admin" && (
+          <Link
+            href={profile.role === "admin" ? "/admin/cuenta" : "/perfil"}
+            className="flex items-center gap-2 rounded-lg p-1 transition hover:bg-mist"
+            title={profile.role === "admin" ? "Mi cuenta de administrador" : "Ajustes de mi perfil"}
+          >
+            <Avatar employee={{ name, photo: avatarUrl(profile) }} size={36} />
+            <div className="hidden sm:block text-left">
+              <p className="max-w-32 truncate text-xs font-bold text-ink" title={name}>
+                {name}
+              </p>
+              <p className="mt-0.5 max-w-32 truncate text-[10px] text-muted">
+                {profile.job_title ||
+                  (profile.role === "admin" ? "Administrador" : "Equipo DIRCOM")}
+              </p>
+            </div>
+          </Link>
+          {profile.role === "admin" ? (
             <Link href="/admin" className="admin-link">
               Panel
+            </Link>
+          ) : (
+            <Link href="/perfil" className="admin-link">
+              Mi perfil
             </Link>
           )}
           <form action={logoutAction}>

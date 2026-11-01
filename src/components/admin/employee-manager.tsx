@@ -47,7 +47,7 @@ export function EmployeeManager({ employees }: { employees: Profile[] }) {
           onClick={() => setSelection({ mode: "status", employee })}
           className="admin-link"
         >
-          {employee.is_active ? "Desactivar" : "Reactivar"}
+          {employee.is_active ? "Despedir" : "Contratar"}
         </button>
         {!employee.is_active && (
           <button
@@ -88,7 +88,7 @@ export function EmployeeManager({ employees }: { employees: Profile[] }) {
     <span
       className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${employee.is_active ? "bg-mint text-forest-ink" : "bg-mist text-muted"}`}
     >
-      {employee.is_active ? "Activo" : "Desactivado"}
+      {employee.is_active ? "Activo" : "Despedido"}
     </span>
   );
   return (
@@ -174,7 +174,9 @@ export function EmployeeManager({ employees }: { employees: Profile[] }) {
               ? "Editar empleado"
               : selection?.mode === "password"
                 ? "Restablecer contraseña"
-                : "Cambiar estado"
+                : selection?.employee.is_active
+                  ? "Despedir empleado"
+                  : "Contratar empleado"
         }
       >
         {selection?.mode === "create" ? (

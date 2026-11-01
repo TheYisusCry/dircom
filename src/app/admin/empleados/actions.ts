@@ -267,9 +267,19 @@ export async function changeEmployeeStatus(
     });
     if (unban.error)
       return fail("No se pudo reactivar la cuenta en Auth. Sigue desactivada.");
+
+    const rawJobTitle = form.get("job_title");
+    const updatePayload: { is_active: boolean; job_title?: string | null } = {
+      is_active: true,
+    };
+    if (typeof rawJobTitle === "string") {
+      const trimmed = rawJobTitle.trim().slice(0, 100);
+      updatePayload.job_title = trimmed.length > 0 ? trimmed : null;
+    }
+
     const update = await admin
       .from("profiles")
-      .update({ is_active: true })
+      .update(updatePayload)
       .eq("id", id);
     if (update.error)
       return fail(
@@ -280,21 +290,21 @@ export async function changeEmployeeStatus(
       .from("profiles")
       .update({ is_active: false })
       .eq("id", id);
-    if (update.error) return fail("No se pudo desactivar el perfil.");
+    if (update.error) return fail("No se pudo despedir al empleado.");
     const ban = await admin.auth.admin.updateUserById(id, {
       ban_duration: "876000h",
     });
     if (ban.error) {
       refresh();
       return fail(
-        "El acceso a DIRCOM está bloqueado, pero Auth no confirmó el bloqueo. Reintenta desactivar para sincronizar.",
+        "El acceso a DIRCOM está bloqueado, pero Auth no confirmó el bloqueo. Reintenta despedir para sincronizar.",
       );
     }
   }
   refresh();
   return ok(
     active === "true"
-      ? "Empleado reactivado. Debe iniciar sesión nuevamente."
-      : "Empleado desactivado. El acceso y las fotografías privadas quedan bloqueados.",
+      ? "Empleado contratado exitosamente. Podrá iniciar sesión con sus credenciales."
+      : "Empleado despedido. El acceso y las fotografías privadas quedan bloqueados.",
   );
 }
