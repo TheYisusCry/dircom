@@ -18,31 +18,32 @@ export function EmployeeFeatured({
       />
       <div className="relative flex flex-1 items-center gap-4 sm:gap-6">
         <div className="relative shrink-0 -rotate-2 transition-transform hover:rotate-0 motion-reduce:transform-none">
-          <div className="relative h-44 w-28 overflow-hidden rounded-2xl border-[3px] border-forest/30 bg-mint sm:h-60 sm:w-44">
+          <div className="relative h-36 w-24 overflow-hidden rounded-2xl border-[3px] border-forest/30 bg-mint sm:h-48 sm:w-32 md:h-60 md:w-44">
             {winner.photo ? (
               <Image
                 src={winner.photo}
+                unoptimized={winner.photo.startsWith("/api/avatars/")}
                 alt={`Retrato de ${winner.name}, empleada destacada de la semana`}
                 fill
                 sizes="(max-width: 640px) 112px, 176px"
                 className="object-cover object-top"
               />
             ) : (
-              <span className="flex h-full items-center justify-center text-4xl font-bold text-forest-ink">
+              <span className="flex h-full items-center justify-center text-3xl font-bold text-forest-ink sm:text-4xl">
                 {winner.name[0]}
               </span>
             )}
           </div>
-          <span className="absolute -bottom-3 -right-3 flex size-12 items-center justify-center rounded-2xl border-4 border-white bg-[#fff2d4]">
-            <IllustratedIcon name="gold" size={29} />
+          <span className="absolute -bottom-3 -right-3 flex size-10 items-center justify-center rounded-2xl border-4 border-white bg-[#fff2d4] sm:size-12">
+            <IllustratedIcon name="gold" size={26} />
           </span>
         </div>
-        <div className="min-w-0 flex-1 py-4">
+        <div className="min-w-0 flex-1 py-2 sm:py-4">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-mint px-2.5 py-1 text-[10px] font-semibold text-forest-ink">
             <IllustratedIcon name="sparkles" size={13} />
             Estrella de la semana
           </span>
-          <h3 className="mt-4 text-2xl leading-tight font-extrabold tracking-tight sm:text-[30px]">
+          <h3 className="mt-3 text-xl leading-tight font-extrabold tracking-tight sm:mt-4 sm:text-2xl md:text-[30px]">
             {winner.name}
           </h3>
           <p className="mt-2 text-xs leading-5 text-muted sm:text-sm">

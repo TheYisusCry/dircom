@@ -1,6 +1,5 @@
 "use client";
-import { useActionState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useActionState, useState } from "react";
 import {
   createEmployee,
   updateEmployee,
@@ -10,46 +9,33 @@ import {
 import {
   INITIAL_ACTION,
   type Profile,
-  type ActionState,
 } from "@/types/database";
 import { Button } from "@/components/ui/button";
+import { FormFeedback } from "@/components/ui/form-feedback";
+import { MONTH_NAMES } from "@/lib/dates";
 
-function Feedback({ state }: { state: ActionState }) {
-  const router = useRouter();
-  useEffect(() => {
-    if (state.status === "success") router.refresh();
-  }, [state.status, router]);
-  return state.message ? (
-    <p
-      role={state.status === "error" ? "alert" : "status"}
-      className={`rounded-xl border p-4 text-sm leading-6 ${state.status === "error" ? "border-red-200 bg-red-50 text-red-800" : "border-forest/20 bg-mint text-forest-ink"}`}
-    >
-      {state.message}
-    </p>
-  ) : null;
-}
-const months = [
-  "Enero",
-  "Febrero",
-  "Marzo",
-  "Abril",
-  "Mayo",
-  "Junio",
-  "Julio",
-  "Agosto",
-  "Septiembre",
-  "Octubre",
-  "Noviembre",
-  "Diciembre",
-];
-
-export function EmployeeForm({ employee }: { employee?: Profile }) {
+export function EmployeeForm({
+  employee,
+  onCancel,
+}: {
+  employee?: Profile;
+  onCancel?: () => void;
+}) {
+  const [formData, setFormData] = useState({
+    first_name: employee?.first_name ?? "",
+    last_name: employee?.last_name ?? "",
+    username: employee?.username ?? "",
+    password: "",
+    job_title: employee?.job_title ?? "",
+    birthday_day: employee?.birthday_day ? String(employee.birthday_day) : "",
+    birthday_month: employee?.birthday_month ? String(employee.birthday_month) : "",
+  });
   const [state, action, pending] = useActionState(
     employee ? updateEmployee : createEmployee,
     INITIAL_ACTION,
   );
   return (
-    <form action={action} className="space-y-5 p-6">
+    <form action={action} autoComplete="off" className="space-y-4 p-4 sm:space-y-5 sm:p-6">
       {employee && (
         <>
           <input type="hidden" name="id" value={employee.id} />
@@ -67,7 +53,13 @@ export function EmployeeForm({ employee }: { employee?: Profile }) {
               name="first_name"
               required
               maxLength={60}
-              defaultValue={employee?.first_name}
+              autoComplete="off"
+              spellCheck={false}
+              data-lpignore="true"
+              value={formData.first_name}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, first_name: e.target.value }))
+              }
               className="auth-input mt-2"
             />
           </label>
@@ -77,7 +69,13 @@ export function EmployeeForm({ employee }: { employee?: Profile }) {
               name="last_name"
               required
               maxLength={60}
-              defaultValue={employee?.last_name}
+              autoComplete="off"
+              spellCheck={false}
+              data-lpignore="true"
+              value={formData.last_name}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, last_name: e.target.value }))
+              }
               className="auth-input mt-2"
             />
           </label>
@@ -93,11 +91,16 @@ export function EmployeeForm({ employee }: { employee?: Profile }) {
                 maxLength={32}
                 autoComplete="off"
                 autoCapitalize="none"
+                spellCheck={false}
+                data-lpignore="true"
+                value={formData.username}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, username: e.target.value }))
+                }
                 className="auth-input mt-2"
               />
               <span className="mt-1 block text-[11px] font-normal text-muted">
-                3–32 caracteres. Empieza con una letra; usa letras, números,
-                punto o guion.
+                De 3 a 32 caracteres.
               </span>
             </label>
             <label className="form-label">
@@ -109,6 +112,10 @@ export function EmployeeForm({ employee }: { employee?: Profile }) {
                 minLength={6}
                 maxLength={64}
                 autoComplete="new-password"
+                value={formData.password}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, password: e.target.value }))
+                }
                 className="auth-input mt-2"
               />
               <PasswordHint />
@@ -120,7 +127,12 @@ export function EmployeeForm({ employee }: { employee?: Profile }) {
           <input
             name="job_title"
             maxLength={100}
-            defaultValue={employee?.job_title ?? ""}
+            autoComplete="off"
+            spellCheck={false}
+            value={formData.job_title}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, job_title: e.target.value }))
+            }
             className="auth-input mt-2"
           />
         </label>
@@ -132,7 +144,10 @@ export function EmployeeForm({ employee }: { employee?: Profile }) {
               type="number"
               min={1}
               max={31}
-              defaultValue={employee?.birthday_day ?? ""}
+              value={formData.birthday_day}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, birthday_day: e.target.value }))
+              }
               className="auth-input mt-2"
             />
           </label>
@@ -140,11 +155,17 @@ export function EmployeeForm({ employee }: { employee?: Profile }) {
             Mes
             <select
               name="birthday_month"
-              defaultValue={employee?.birthday_month ?? ""}
+              value={formData.birthday_month}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  birthday_month: e.target.value,
+                }))
+              }
               className="auth-input mt-2"
             >
               <option value="">Sin cumpleaños</option>
-              {months.map((month, index) => (
+              {MONTH_NAMES.map((month, index) => (
                 <option key={month} value={index + 1}>
                   {month}
                 </option>
@@ -170,14 +191,31 @@ export function EmployeeForm({ employee }: { employee?: Profile }) {
           </span>
         </label>
       </fieldset>
-      <Feedback state={state} />
-      <Button type="submit" disabled={pending} className="w-full">
-        {pending
-          ? "Guardando…"
-          : employee
-            ? "Guardar cambios"
-            : "Crear empleado"}
-      </Button>
+      <FormFeedback state={state} />
+      <div className="flex items-center gap-3">
+        {onCancel && (
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onCancel}
+            disabled={pending}
+            className="flex-1"
+          >
+            Cancelar
+          </Button>
+        )}
+        <Button
+          type="submit"
+          disabled={pending}
+          className={onCancel ? "flex-1" : "w-full"}
+        >
+          {pending
+            ? "Guardando…"
+            : employee
+              ? "Guardar cambios"
+              : "Crear empleado"}
+        </Button>
+      </div>
     </form>
   );
 }
@@ -189,13 +227,20 @@ function PasswordHint() {
     </span>
   );
 }
-export function PasswordResetForm({ employee }: { employee: Profile }) {
+export function PasswordResetForm({
+  employee,
+  onCancel,
+}: {
+  employee: Profile;
+  onCancel?: () => void;
+}) {
+  const [password, setPassword] = useState("");
   const [state, action, pending] = useActionState(
     resetEmployeePassword,
     INITIAL_ACTION,
   );
   return (
-    <form action={action} className="space-y-5 p-6">
+    <form action={action} autoComplete="off" className="space-y-4 p-4 sm:space-y-5 sm:p-6">
       <input type="hidden" name="id" value={employee.id} />
       <p className="text-sm leading-6 text-muted">
         Establece una contraseña nueva para{" "}
@@ -214,23 +259,44 @@ export function PasswordResetForm({ employee }: { employee: Profile }) {
           maxLength={64}
           autoComplete="new-password"
           disabled={pending}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
           className="auth-input mt-2"
         />
         <PasswordHint />
       </label>
-      <Feedback state={state} />
-      <Button type="submit" disabled={pending} className="w-full">
-        {pending ? "Restableciendo…" : "Restablecer contraseña"}
-      </Button>
+      <FormFeedback state={state} />
+      <div className="flex items-center gap-3">
+        {onCancel && (
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onCancel}
+            disabled={pending}
+            className="flex-1"
+          >
+            Cancelar
+          </Button>
+        )}
+        <Button
+          type="submit"
+          disabled={pending}
+          className={onCancel ? "flex-1" : "w-full"}
+        >
+          {pending ? "Restableciendo…" : "Restablecer contraseña"}
+        </Button>
+      </div>
     </form>
   );
 }
 export function StatusForm({
   employee,
   blockAgain = false,
+  onCancel,
 }: {
   employee: Profile;
   blockAgain?: boolean;
+  onCancel?: () => void;
 }) {
   const activate = !employee.is_active && !blockAgain;
   const [state, action, pending] = useActionState(
@@ -238,7 +304,7 @@ export function StatusForm({
     INITIAL_ACTION,
   );
   return (
-    <form action={action} className="space-y-5 p-6">
+    <form action={action} autoComplete="off" className="space-y-4 p-4 sm:space-y-5 sm:p-6">
       <input type="hidden" name="id" value={employee.id} />
       <input
         type="hidden"
@@ -250,14 +316,31 @@ export function StatusForm({
           ? "El empleado podrá volver a iniciar sesión con sus credenciales. Las sesiones antiguas seguirán bloqueadas."
           : "El empleado perderá acceso a la aplicación y dejará de aparecer en el directorio interno activo. Se conservará su historial."}
       </p>
-      <Feedback state={state} />
-      <Button type="submit" disabled={pending} className="w-full">
-        {pending
-          ? "Actualizando…"
-          : activate
-            ? "Reactivar empleado"
-            : "Desactivar empleado"}
-      </Button>
+      <FormFeedback state={state} />
+      <div className="flex items-center gap-3">
+        {onCancel && (
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onCancel}
+            disabled={pending}
+            className="flex-1"
+          >
+            Cancelar
+          </Button>
+        )}
+        <Button
+          type="submit"
+          disabled={pending}
+          className={onCancel ? "flex-1" : "w-full"}
+        >
+          {pending
+            ? "Actualizando…"
+            : activate
+              ? "Reactivar empleado"
+              : "Desactivar empleado"}
+        </Button>
+      </div>
     </form>
   );
 }

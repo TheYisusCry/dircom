@@ -31,6 +31,7 @@ test("migraciones y permisos en PostgreSQL local", async (t) => {
     "202610300001_birthdays.sql",
     "202610300002_voting.sql",
     "202610300003_activities.sql",
+    "202610300004_flexible_username.sql",
   ])
     await db.exec(
       await readFile(

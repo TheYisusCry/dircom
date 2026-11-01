@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Users, LockKeyhole, PartyPopper } from "@/components/ui/icon";
+import { Users, LockKeyhole, PartyPopper, Vote } from "@/components/ui/icon";
 export default async function AdminPage() {
   await requireAdmin();
   const admin = createAdminClient();
@@ -50,24 +50,27 @@ export default async function AdminPage() {
           </p>
         </div>
       </div>
-      <div className="mt-7 flex flex-wrap gap-4">
+      <div className="mt-8 grid gap-5 sm:grid-cols-3">
         <Link
           href="/admin/empleados"
-          className="inline-flex min-h-11 items-center rounded-xl bg-forest px-5 py-3 text-sm font-bold text-on-forest"
+          className="flex min-h-16 items-center justify-center gap-3 rounded-2xl bg-forest px-6 py-4 text-center text-base font-bold text-on-forest shadow-xs transition-all hover:bg-forest-light hover:shadow-md"
         >
-          Gestionar empleados →
+          <Users size={22} aria-hidden="true" />
+          <span>Gestionar empleados</span>
         </Link>
         <Link
           href="/admin/cumpleanos"
-          className="inline-flex min-h-11 items-center rounded-xl border border-line bg-white px-5 py-3 text-sm font-bold text-ink hover:bg-mist"
+          className="flex min-h-16 items-center justify-center gap-3 rounded-2xl border border-line bg-white px-6 py-4 text-center text-base font-bold text-ink shadow-xs transition-all hover:border-forest/40 hover:bg-mist hover:text-forest-ink hover:shadow-md"
         >
-          Gestionar cumpleaños →
+          <PartyPopper size={22} aria-hidden="true" />
+          <span>Gestionar cumpleaños</span>
         </Link>
         <Link
           href="/admin/votaciones"
-          className="inline-flex min-h-11 items-center rounded-xl border border-line bg-white px-5 py-3 text-sm font-bold text-ink hover:bg-mist"
+          className="flex min-h-16 items-center justify-center gap-3 rounded-2xl border border-line bg-white px-6 py-4 text-center text-base font-bold text-ink shadow-xs transition-all hover:border-forest/40 hover:bg-mist hover:text-forest-ink hover:shadow-md"
         >
-          Votaciones de la semana →
+          <Vote size={22} aria-hidden="true" />
+          <span>Votaciones de la semana</span>
         </Link>
       </div>
     </>

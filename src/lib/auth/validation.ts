@@ -1,6 +1,6 @@
 import type { ProfileFields } from "../../types/database";
 
-export const USERNAME_PATTERN = /^[a-z][a-z0-9._-]{2,31}$/;
+export const USERNAME_PATTERN = /^[^\r\n]{3,32}$/;
 export const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const MAX_AVATAR_BYTES = 3 * 1024 * 1024;
@@ -10,9 +10,7 @@ export function normalizeUsername(value: string) {
 export function validateUsername(value: string) {
   const normalized = normalizeUsername(value);
   if (!USERNAME_PATTERN.test(normalized))
-    throw new Error(
-      "El usuario debe tener 3–32 caracteres, empezar con una letra y usar letras, números, punto o guion.",
-    );
+    throw new Error("El usuario debe tener entre 3 y 32 caracteres.");
   return normalized;
 }
 export function validatePassword(password: string) {

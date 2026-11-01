@@ -49,7 +49,7 @@ export function VotingBallotModal({
       onClose={onClose}
       title="¿Quién hizo la diferencia esta semana?"
     >
-      <form action={formAction} className="space-y-5 p-6 sm:p-7">
+      <form action={formAction} className="space-y-4 p-4 sm:space-y-5 sm:p-6">
         <input type="hidden" name="round_id" value={round.id} />
         <input type="hidden" name="candidate_id" value={selectedCandidateId ?? ""} />
 

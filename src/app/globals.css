@@ -118,7 +118,19 @@ dialog:focus {
     background: white;
     padding: 11px 13px;
     color: var(--color-ink);
-    font-size: 14px;
+    font-size: 16px;
+  }
+  @media (min-width: 640px) {
+    .auth-input {
+      font-size: 14px;
+    }
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
   .auth-input:disabled {
     background: var(--color-mist);

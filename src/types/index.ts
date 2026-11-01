@@ -37,15 +37,6 @@ export interface WeeklyRecognition {
   podium: readonly PodiumPlace[];
 }
 
-export type VotingPresentation =
-  | { state: "scheduled"; opensAt: string }
-  | { state: "open"; closesAt: string }
-  | { state: "registered"; closesAt: string }
-  | { state: "closed"; closedAt: string }
-  | { state: "published"; recognition: WeeklyRecognition };
-
-export type VotingState = VotingPresentation["state"];
-
 export interface ActivityMessage {
   id: string;
   author: Employee;

@@ -37,7 +37,7 @@ export function NewActivityPreview() {
           onClose={() => setOpen(false)}
           title="Un buen plan empieza con una idea"
         >
-          <form action={formAction} className="space-y-5 p-6 sm:p-8">
+          <form action={formAction} className="space-y-4 p-4 sm:space-y-5 sm:p-6">
             {state.message && (
               <p
                 role={state.status === "error" ? "alert" : "status"}
@@ -59,24 +59,24 @@ export function NewActivityPreview() {
               <div>
                 <label className="block text-xs font-semibold">Tipo de actividad</label>
                 <input type="hidden" name="category" value={category} />
-                <div className="mt-2 grid grid-cols-3 gap-2">
+                <div className="mt-2 grid grid-cols-3 gap-1.5 sm:gap-2">
                   <button
                     type="button"
                     onClick={() => setCategory("food")}
-                    className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border p-3 text-xs font-bold transition-all ${
+                    className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border p-2 text-[11px] font-bold transition-all sm:p-3 sm:text-xs ${
                       category === "food"
                         ? "border-forest bg-[#f4ecdc] text-[#8b6023] ring-2 ring-forest/30"
                         : "border-line bg-mist/50 text-muted hover:bg-mist"
                     }`}
                   >
                     <Utensils size={18} />
-                    <span>Comida / Pedido</span>
+                    <span>Comida</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setCategory("coffee")}
-                    className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border p-3 text-xs font-bold transition-all ${
+                    className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border p-2 text-[11px] font-bold transition-all sm:p-3 sm:text-xs ${
                       category === "coffee"
                         ? "border-forest bg-mint text-forest-ink ring-2 ring-forest/30"
                         : "border-line bg-mist/50 text-muted hover:bg-mist"
@@ -89,14 +89,14 @@ export function NewActivityPreview() {
                   <button
                     type="button"
                     onClick={() => setCategory("social")}
-                    className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border p-3 text-xs font-bold transition-all ${
+                    className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border p-2 text-[11px] font-bold transition-all sm:p-3 sm:text-xs ${
                       category === "social"
                         ? "border-forest bg-[#e9edf6] text-[#516584] ring-2 ring-forest/30"
                         : "border-line bg-mist/50 text-muted hover:bg-mist"
                     }`}
                   >
                     <IllustratedIcon name="social" size={18} />
-                    <span>Plan / Salida</span>
+                    <span>Encuentro</span>
                   </button>
                 </div>
               </div>

@@ -1,10 +1,10 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
+import { FormFeedback } from "@/components/ui/form-feedback";
 import {
   CalendarDays,
   CalendarClock,
@@ -18,7 +18,6 @@ import { avatarUrl } from "@/lib/auth/validation";
 import { saveCelebration, deleteCelebration } from "@/app/admin/cumpleanos/actions";
 import {
   INITIAL_ACTION,
-  type ActionState,
   type BirthdayCelebrationRow,
   type Profile,
 } from "@/types/database";
@@ -26,25 +25,6 @@ import {
 export type CelebrationWithEmployee = BirthdayCelebrationRow & {
   employee: Profile;
 };
-
-function Feedback({ state }: { state: ActionState }) {
-  const router = useRouter();
-  useEffect(() => {
-    if (state.status === "success") router.refresh();
-  }, [state.status, router]);
-  return state.message ? (
-    <p
-      role={state.status === "error" ? "alert" : "status"}
-      className={`rounded-xl border p-4 text-sm leading-6 ${
-        state.status === "error"
-          ? "border-red-200 bg-red-50 text-red-800"
-          : "border-forest/20 bg-mint text-forest-ink"
-      }`}
-    >
-      {state.message}
-    </p>
-  ) : null;
-}
 
 export function CelebrationManager({
   celebrations,
@@ -225,8 +205,8 @@ function CelebrationFormModal({
       onClose={onClose}
       title={celebration ? "Editar celebración" : "Programar nueva celebración"}
     >
-      <form action={formAction} className="space-y-4 p-6">
-        <Feedback state={state} />
+      <form action={formAction} className="space-y-4 p-4 sm:p-6">
+        <FormFeedback state={state} />
 
         {celebration && <input type="hidden" name="id" value={celebration.id} />}
 
@@ -364,8 +344,8 @@ function DeleteCelebrationModal({
 
   return (
     <Modal open onClose={onClose} title="Eliminar celebración">
-      <form action={formAction} className="space-y-4 p-6">
-        <Feedback state={state} />
+      <form action={formAction} className="space-y-4 p-4 sm:p-6">
+        <FormFeedback state={state} />
         <input type="hidden" name="id" value={celebration.id} />
 
         <p className="text-sm leading-6 text-muted">

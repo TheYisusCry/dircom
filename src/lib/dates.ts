@@ -6,6 +6,36 @@ import type {
 
 export const OFFICE_TIME_ZONE = "America/La_Paz";
 
+export const MONTH_NAMES = [
+  "Enero",
+  "Febrero",
+  "Marzo",
+  "Abril",
+  "Mayo",
+  "Junio",
+  "Julio",
+  "Agosto",
+  "Septiembre",
+  "Octubre",
+  "Noviembre",
+  "Diciembre",
+] as const;
+
+export function formatCountdown(closesAtIso: string): {
+  text: string;
+  expired: boolean;
+} {
+  const remainingMs = new Date(closesAtIso).getTime() - Date.now();
+  if (remainingMs <= 0) return { text: "00:00 (Tiempo cumplido)", expired: true };
+  const totalSec = Math.floor(remainingMs / 1000);
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  return {
+    text: `${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}`,
+    expired: false,
+  };
+}
+
 export function formatCalendarDate(
   date: string,
   options: Intl.DateTimeFormatOptions = {},
@@ -149,6 +179,25 @@ export function profileToEmployee(profile: {
       day: profile.birthday_day,
       month: profile.birthday_month,
     },
+  };
+}
+
+/** Converts an arbitrary profile row to an Employee model for activities and general lists. */
+export function profileToParticipant(p?: {
+  id?: string;
+  first_name?: string;
+  last_name?: string;
+  job_title?: string | null;
+  avatar_path?: string | null;
+} | null): Employee {
+  return {
+    id: p?.id ?? "unknown",
+    name: p?.first_name
+      ? `${p.first_name} ${p.last_name ?? ""}`.trim()
+      : "Compañero DIRCOM",
+    role: p?.job_title || "Equipo DIRCOM",
+    photo: p?.avatar_path ? `/api/avatars/${p.id}` : undefined,
+    birthday: { day: 1, month: 1 },
   };
 }
 

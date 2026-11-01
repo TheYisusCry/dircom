@@ -99,9 +99,6 @@ export function BirthdayDetailModal({
             invitación, encontrarás aquí su lugar, fecha y hora.
           </p>
         )}
-        <p className="text-xs text-muted">
-          Invitación de ejemplo · No se registra asistencia.
-        </p>
         <Button onClick={onClose} className="w-full">
           Cerrar invitación
         </Button>

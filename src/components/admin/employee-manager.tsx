@@ -166,6 +166,7 @@ export function EmployeeManager({ employees }: { employees: Profile[] }) {
       <Modal
         open={selection !== null}
         onClose={close}
+        closeOnClickOutside={false}
         title={
           selection?.mode === "create"
             ? "Crear empleado"
@@ -177,15 +178,16 @@ export function EmployeeManager({ employees }: { employees: Profile[] }) {
         }
       >
         {selection?.mode === "create" ? (
-          <EmployeeForm />
+          <EmployeeForm onCancel={close} />
         ) : selection?.mode === "edit" ? (
-          <EmployeeForm employee={selection.employee} />
+          <EmployeeForm employee={selection.employee} onCancel={close} />
         ) : selection?.mode === "password" ? (
-          <PasswordResetForm employee={selection.employee} />
+          <PasswordResetForm employee={selection.employee} onCancel={close} />
         ) : selection ? (
           <StatusForm
             employee={selection.employee}
             blockAgain={selection.mode === "block"}
+            onCancel={close}
           />
         ) : null}
       </Modal>

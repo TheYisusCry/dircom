@@ -36,6 +36,7 @@ export const Clock3 = symbol("schedule");
 export const Coffee = symbol("coffee");
 export const CircleHelp = symbol("help");
 export const LockKeyhole = symbol("lock");
+export const LayoutDashboard = symbol("dashboard");
 export const MapPin = symbol("location_on");
 export const Medal = symbol("workspace_premium");
 export const Menu = symbol("menu");

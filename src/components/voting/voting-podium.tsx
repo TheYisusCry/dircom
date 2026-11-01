@@ -80,11 +80,11 @@ export function VotingPodium({ places }: { places: readonly PodiumPlace[] }) {
                   )}
                   <Avatar
                     employee={employee}
-                    size={position === 1 ? 72 : 56}
-                    className={`ring-[3px] ring-offset-4 ring-offset-white ${podium.ring}`}
+                    size={position === 1 ? 64 : 48}
+                    className={`ring-[3px] ring-offset-2 ring-offset-white sm:ring-offset-4 ${podium.ring}`}
                   />
                 </div>
-                <p className="flex min-h-10 items-center justify-center text-[11px] leading-4 font-bold sm:text-xs">
+                <p className="flex min-h-10 items-center justify-center text-[10px] leading-3.5 font-bold line-clamp-2 sm:text-xs sm:leading-4">
                   {employee.name}
                 </p>
                 <div

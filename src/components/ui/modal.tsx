@@ -9,11 +9,13 @@ export function Modal({
   onClose,
   title,
   children,
+  closeOnClickOutside = true,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: ReactNode;
+  closeOnClickOutside?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -41,6 +43,7 @@ export function Modal({
         onClose();
       }}
       onClick={(event) => {
+        if (!closeOnClickOutside) return;
         if (event.target !== event.currentTarget) return;
         const bounds = event.currentTarget.getBoundingClientRect();
         if (
@@ -51,7 +54,7 @@ export function Modal({
         )
           onClose();
       }}
-      className="m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-xl overflow-y-auto rounded-2xl border border-line bg-white p-0 text-ink shadow-xl backdrop:bg-ink/55"
+      className="m-auto max-h-[90dvh] w-[calc(100%-1.5rem)] max-w-xl overflow-y-auto overscroll-contain rounded-2xl border border-line bg-white p-0 text-ink shadow-xl backdrop:bg-ink/55 sm:w-[calc(100%-2rem)]"
     >
       {open && (
         <motion.div
@@ -59,7 +62,7 @@ export function Modal({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: reducedMotion ? 0 : 0.2 }}
         >
-          <div className="flex items-center justify-between gap-4 border-b border-line px-6 py-5">
+          <div className="flex items-center justify-between gap-4 border-b border-line px-4 py-4 sm:px-6 sm:py-5">
             <h2 id={titleId} className="text-lg font-bold">
               {title}
             </h2>

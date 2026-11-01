@@ -13,40 +13,41 @@ import { CelebrationConfetti } from "@/components/voting/celebration-confetti";
 import { ActivityBoard } from "@/components/activities/activity-board";
 import { NewActivityPreview } from "@/components/activities/new-activity-preview";
 import {
-  celebrations as demoCelebrations,
-  DEMO_DATE,
-  employees as demoEmployees,
-  recognition as demoRecognition,
-} from "@/data/mock-data";
-import {
   celebrationRowToCelebration,
   getBirthdaysOfMonth,
   getNextBirthday,
   getOfficeCurrentDate,
   profileToEmployee,
+  profileToParticipant,
 } from "@/lib/dates";
 import { requireProfile } from "@/lib/auth/session";
 import { createSessionClient } from "@/lib/supabase/server";
 import type { Activity, Employee, PodiumPlace, WeeklyRecognition } from "@/types";
 import type { VotingRoundRow } from "@/types/database";
 
-function profileToParticipant(p?: {
+type RawProfile = {
   id?: string;
   first_name?: string;
   last_name?: string;
   job_title?: string | null;
   avatar_path?: string | null;
-} | null): Employee {
-  return {
-    id: p?.id ?? "unknown",
-    name: p?.first_name
-      ? `${p.first_name} ${p.last_name ?? ""}`.trim()
-      : "Compañero DIRCOM",
-    role: p?.job_title || "Equipo DIRCOM",
-    photo: p?.avatar_path ? `/api/avatars/${p.id}` : undefined,
-    birthday: { day: 1, month: 1 },
-  };
-}
+};
+
+type RawActivity = {
+  id: string;
+  title: string;
+  category: "food" | "coffee" | "social";
+  description: string;
+  status: "open" | "closed";
+  created_at: string;
+  creator?: RawProfile | RawProfile[] | null;
+  messages?: Array<{
+    id: string;
+    text: string;
+    created_at: string;
+    author?: RawProfile | RawProfile[] | null;
+  }> | null;
+};
 
 export const dynamic = "force-dynamic";
 export default async function Home() {
@@ -114,17 +115,9 @@ export default async function Home() {
     celebrationRowToCelebration,
   );
 
-  const useRealData = dbEmployees.length > 0;
-  const activeEmployees = useRealData ? dbEmployees : demoEmployees;
-  const activeCelebrations = useRealData ? dbCelebrations : demoCelebrations;
-
   const { todayIso, currentMonth, currentYear } = getOfficeCurrentDate();
-  const refDate = useRealData ? todayIso : DEMO_DATE;
-  const birthday = getNextBirthday(activeEmployees, activeCelebrations, refDate);
-  const monthBirthdays = getBirthdaysOfMonth(
-    activeEmployees,
-    useRealData ? currentMonth : 10,
-  );
+  const birthday = getNextBirthday(dbEmployees, dbCelebrations, todayIso);
+  const monthBirthdays = getBirthdaysOfMonth(dbEmployees, currentMonth);
 
   // Voting state and recognition
   const activeRound = activeRoundRes.data as VotingRoundRow | null;
@@ -148,7 +141,7 @@ export default async function Home() {
   }));
 
   // Build podium & recognition from published round if available
-  let activeRecognition: WeeklyRecognition = demoRecognition;
+  let activeRecognition: WeeklyRecognition | null = null;
   if (
     publishedRound &&
     Array.isArray(publishedRound.podium) &&
@@ -166,38 +159,21 @@ export default async function Home() {
       recognition: p.recognition,
     }));
 
-    activeRecognition = {
-      weekLabel: publishedRound.week_label,
-      winner: realPodium[0]?.employee ?? demoRecognition.winner,
-      message:
-        "Por su compromiso diario, compañerismo y dedicación. ¡Gracias por hacer que DIRCOM llegue más lejos!",
-      podium: realPodium.length >= 3 ? realPodium : demoRecognition.podium,
-    };
+    if (realPodium.length > 0) {
+      activeRecognition = {
+        weekLabel: publishedRound.week_label,
+        winner: realPodium[0]?.employee ?? {
+          id: "winner",
+          name: "Empleado Destacado",
+          role: "Equipo DIRCOM",
+          birthday: { day: 1, month: 1 },
+        },
+        message:
+          "Por su compromiso diario, compañerismo y dedicación. ¡Gracias por hacer que DIRCOM llegue más lejos!",
+        podium: realPodium,
+      };
+    }
   }
-
-  type RawProfile = {
-    id?: string;
-    first_name?: string;
-    last_name?: string;
-    job_title?: string | null;
-    avatar_path?: string | null;
-  };
-
-  type RawActivity = {
-    id: string;
-    title: string;
-    category: "food" | "coffee" | "social";
-    description: string;
-    status: "open" | "closed";
-    created_at: string;
-    creator?: RawProfile | RawProfile[] | null;
-    messages?: Array<{
-      id: string;
-      text: string;
-      created_at: string;
-      author?: RawProfile | RawProfile[] | null;
-    }> | null;
-  };
 
   const rawActivities =
     (activitiesRes.data as unknown as RawActivity[] | null) ?? [];
@@ -244,9 +220,6 @@ export default async function Home() {
         <UserGreeting
           profile={{ name: `${profile.first_name} ${profile.last_name}` }}
         />
-        <p className="mb-5 text-[11px] text-muted">
-          El perfil, cumpleaños, votaciones y actividades son reales. ¡Tu plataforma DIRCOM está 100% conectada!
-        </p>
         <section id="cumpleanos" aria-labelledby="birthday-heading">
           <SectionHeading
             id="birthday-heading"
@@ -266,15 +239,15 @@ export default async function Home() {
           ) : (
             <EmptyState
               title="Próximos cumpleaños por descubrir"
-              description="Agrega los cumpleaños del equipo para destacar aquí el próximo."
+              description="Registra los cumpleaños del equipo para destacar aquí el próximo."
             />
           )}
           <BirthdayMonthList
             employees={monthBirthdays}
-            celebrations={activeCelebrations}
-            currentMonth={useRealData ? currentMonth : 10}
-            currentYear={useRealData ? currentYear : 2026}
-            todayIso={refDate}
+            celebrations={dbCelebrations}
+            currentMonth={currentMonth}
+            currentYear={currentYear}
+            todayIso={todayIso}
           />
         </section>
         <section
@@ -288,21 +261,30 @@ export default async function Home() {
             subtitle="Reconocemos el compromiso y las buenas ideas."
             icon={<IllustratedIcon name="trophy" size={22} />}
           >
-            <span className="rounded-full border border-line bg-white px-3 py-1.5 text-[10px] font-semibold text-muted">
-              {activeRecognition.weekLabel}
-            </span>
+            {activeRecognition && (
+              <span className="rounded-full border border-line bg-white px-3 py-1.5 text-[10px] font-semibold text-muted">
+                {activeRecognition.weekLabel}
+              </span>
+            )}
           </SectionHeading>
-          <div className="grid gap-5 lg:grid-cols-[1.45fr_1fr]">
-            <EmployeeFeatured recognition={activeRecognition} />
-            <VotingPodium places={activeRecognition.podium} />
-          </div>
+          {activeRecognition ? (
+            <div className="grid gap-5 lg:grid-cols-[1.45fr_1fr]">
+              <EmployeeFeatured recognition={activeRecognition} />
+              <VotingPodium places={activeRecognition.podium} />
+            </div>
+          ) : (
+            <EmptyState
+              title="Votación de la semana por comenzar"
+              description="Cuando el administrador inicie y publique los resultados de la votación semanal, el podio y el empleado destacado se mostrarán aquí."
+            />
+          )}
           <VotingStatus
             activeRound={activeRound}
             hasVoted={hasVoted}
             candidates={candidates}
             isEmployee={profile.role === "employee"}
-            winnerName={activeRecognition.winner.name}
-            weekLabel={activeRecognition.weekLabel}
+            winnerName={activeRecognition?.winner.name}
+            weekLabel={activeRecognition?.weekLabel}
           />
         </section>
         <section

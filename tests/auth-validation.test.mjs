@@ -11,14 +11,16 @@ import {
   ProvisionFailure,
 } from "../src/lib/auth/provision.ts";
 
-test("usuario normalizado, ASCII, longitud y rechazo de formatos inseguros", () => {
+test("usuario normalizado y validación de longitud 3 a 32 caracteres", () => {
   assert.equal(validateUsername("  Mia.Flores "), "mia.flores");
+  assert.equal(validateUsername("1usuario"), "1usuario");
+  assert.equal(validateUsername("mía"), "mía");
+  assert.equal(validateUsername("mia@test"), "mia@test");
+  assert.equal(validateUsername("../admin"), "../admin");
   for (const input of [
+    "",
+    "  ",
     "ab",
-    "1usuario",
-    "../admin",
-    "mía",
-    "mia@test",
     "a".repeat(33),
   ])
     assert.throws(() => validateUsername(input));

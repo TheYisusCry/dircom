@@ -1,9 +1,9 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
+import { FormFeedback } from "@/components/ui/form-feedback";
 import {
   CalendarClock,
   Clock3,
@@ -14,7 +14,7 @@ import {
   Users,
   Vote,
 } from "@/components/ui/icon";
-import { formatEventDate, formatTime } from "@/lib/dates";
+import { formatCountdown, formatEventDate, formatTime } from "@/lib/dates";
 import {
   openVotingRound,
   closeVotingRound,
@@ -22,40 +22,8 @@ import {
 } from "@/app/admin/votaciones/actions";
 import {
   INITIAL_ACTION,
-  type ActionState,
   type VotingRoundRow,
 } from "@/types/database";
-
-function Feedback({ state }: { state: ActionState }) {
-  const router = useRouter();
-  useEffect(() => {
-    if (state.status === "success") router.refresh();
-  }, [state.status, router]);
-  return state.message ? (
-    <p
-      role={state.status === "error" ? "alert" : "status"}
-      className={`rounded-xl border p-4 text-sm leading-6 ${
-        state.status === "error"
-          ? "border-red-200 bg-red-50 text-red-800"
-          : "border-forest/20 bg-mint text-forest-ink"
-      }`}
-    >
-      {state.message}
-    </p>
-  ) : null;
-}
-
-function getCountdown(closesAt: string) {
-  const remainingMs = new Date(closesAt).getTime() - Date.now();
-  if (remainingMs <= 0) return { text: "00:00 (Tiempo cumplido)", expired: true };
-  const totalSec = Math.floor(remainingMs / 1000);
-  const min = Math.floor(totalSec / 60);
-  const sec = totalSec % 60;
-  return {
-    text: `${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}`,
-    expired: false,
-  };
-}
 
 export function VotingAdminManager({
   activeRound,
@@ -71,7 +39,7 @@ export function VotingAdminManager({
   const [modalOpen, setModalOpen] = useState(false);
   const [countdown, setCountdown] = useState(() =>
     activeRound?.status === "open"
-      ? getCountdown(activeRound.closes_at)
+      ? formatCountdown(activeRound.closes_at)
       : { text: "", expired: false },
   );
 
@@ -79,7 +47,7 @@ export function VotingAdminManager({
     if (!activeRound || activeRound.status !== "open") return;
 
     const interval = setInterval(() => {
-      setCountdown(getCountdown(activeRound.closes_at));
+      setCountdown(formatCountdown(activeRound.closes_at));
     }, 1000);
     return () => clearInterval(interval);
   }, [activeRound]);
@@ -96,8 +64,8 @@ export function VotingAdminManager({
   return (
     <>
       <div className="space-y-6">
-        <Feedback state={closeState} />
-        <Feedback state={publishState} />
+        <FormFeedback state={closeState} />
+        <FormFeedback state={publishState} />
 
         {/* Panel de Ronda Activa o Botón para Iniciar */}
         {activeRound ? (
@@ -298,8 +266,8 @@ function OpenVotingModal({ onClose }: { onClose: () => void }) {
 
   return (
     <Modal open onClose={onClose} title="Iniciar votación de la semana">
-      <form action={formAction} className="space-y-4 p-6">
-        <Feedback state={state} />
+      <form action={formAction} className="space-y-4 p-4 sm:p-6">
+        <FormFeedback state={state} />
 
         <fieldset disabled={pending} className="space-y-4">
           <label className="form-label">

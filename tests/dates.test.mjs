@@ -9,6 +9,9 @@ import {
   getBirthdaysOfMonth,
   profileToEmployee,
   celebrationRowToCelebration,
+  formatCountdown,
+  MONTH_NAMES,
+  profileToParticipant,
 } from "../src/lib/dates.ts";
 
 const employee = (id, day, month) => ({
@@ -164,4 +167,39 @@ test("profileToEmployee y celebrationRowToCelebration adaptan modelos", () => {
   });
   assert.equal(cel.image, "/images/celebration.jpg");
   assert.equal(cel.employeeId, "u1");
+});
+
+test("formatCountdown, MONTH_NAMES y profileToParticipant", () => {
+  assert.equal(MONTH_NAMES.length, 12);
+  assert.equal(MONTH_NAMES[0], "Enero");
+  assert.equal(MONTH_NAMES[11], "Diciembre");
+
+  const future = new Date(Date.now() + 125_000).toISOString();
+  const cd = formatCountdown(future);
+  assert.equal(cd.expired, false);
+  assert.match(cd.text, /^\d{2}:\d{2}$/);
+
+  const past = new Date(Date.now() - 5_000).toISOString();
+  const cdPast = formatCountdown(past);
+  assert.equal(cdPast.expired, true);
+  assert.equal(cdPast.text, "00:00 (Tiempo cumplido)");
+
+  const part = profileToParticipant({
+    id: "p1",
+    first_name: "Juan",
+    last_name: "Pérez",
+    job_title: "Desarrollador",
+    avatar_path: "p1/pic.webp",
+  });
+  assert.deepEqual(part, {
+    id: "p1",
+    name: "Juan Pérez",
+    role: "Desarrollador",
+    photo: "/api/avatars/p1",
+    birthday: { day: 1, month: 1 },
+  });
+
+  const emptyPart = profileToParticipant(null);
+  assert.equal(emptyPart.name, "Compañero DIRCOM");
+  assert.equal(emptyPart.photo, undefined);
 });

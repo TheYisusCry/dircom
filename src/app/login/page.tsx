@@ -10,7 +10,7 @@ export default async function LoginPage() {
   return (
     <main
       id="contenido"
-      className="flex min-h-screen items-center justify-center px-5 py-12"
+      className="flex min-h-screen items-center justify-center px-4 py-8 sm:px-5 sm:py-12"
     >
       <div className="grid w-full max-w-[950px] gap-6 lg:grid-cols-2">
         <div className="relative hidden flex-col justify-center overflow-hidden rounded-[28px] border border-forest/15 bg-mint p-10 lg:flex">
@@ -28,7 +28,7 @@ export default async function LoginPage() {
             nuestra oficina.
           </p>
         </div>
-        <div className="panel p-7 sm:p-10">
+        <div className="panel p-5 sm:p-10">
           <p className="text-2xl font-extrabold tracking-tight text-forest">
             DIRCOM.
           </p>

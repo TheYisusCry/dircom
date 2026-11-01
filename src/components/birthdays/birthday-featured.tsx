@@ -19,6 +19,7 @@ export function BirthdayFeatured({
   birthday: BirthdayPresentation;
 }) {
   const [open, setOpen] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const { employee, nextBirthday, celebration } = birthday;
 
   return (
@@ -27,14 +28,16 @@ export function BirthdayFeatured({
         <div className="flex items-center gap-4 sm:gap-6">
           <div className="relative h-32 w-24 shrink-0 sm:h-44 sm:w-36">
             <div className="relative h-full w-full overflow-hidden rounded-xl bg-mint">
-              {employee.photo ? (
+              {employee.photo && !imgError ? (
                 <Image
                   src={employee.photo}
+                  unoptimized={employee.photo.startsWith("/api/avatars/")}
                   alt={`Retrato de ${employee.name}, próximo cumpleaños del equipo`}
                   fill
                   preload
                   sizes="(max-width: 640px) 96px, 144px"
                   className="object-cover object-[center_35%]"
+                  onError={() => setImgError(true)}
                 />
               ) : (
                 <span className="flex h-full items-center justify-center text-4xl font-bold text-forest-ink">
@@ -51,7 +54,7 @@ export function BirthdayFeatured({
               <PartyPopper size={12} aria-hidden="true" />
               Un día para celebrar
             </span>
-            <h3 className="mt-3 text-2xl font-bold tracking-tight sm:text-[28px]">
+            <h3 className="mt-3 text-xl font-bold tracking-tight sm:text-2xl lg:text-[28px]">
               {employee.name}
             </h3>
             <p className="mt-1.5 text-xs leading-5 text-muted sm:text-sm">

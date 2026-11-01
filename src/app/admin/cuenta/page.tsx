@@ -10,7 +10,7 @@ export default async function AdministratorAccountPage() {
         Gestiona la contraseña de tu cuenta administradora.
       </p>
       <section
-        className="panel mt-7 max-w-xl p-6 sm:p-8"
+        className="panel mt-7 max-w-xl p-5 sm:p-8"
         aria-labelledby="admin-password-title"
       >
         <p className="text-sm font-bold">

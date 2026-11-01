@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
-import { formatEventDate, formatTime } from "@/lib/dates";
+import { formatCountdown, formatEventDate, formatTime } from "@/lib/dates";
 import { VotingBallotModal } from "./voting-ballot-modal";
 import type { VotingRoundRow } from "@/types/database";
 
@@ -21,15 +21,6 @@ interface Candidate {
   name: string;
   role: string;
   photo?: string;
-}
-
-function formatRemaining(closesAt: string): string {
-  const remainingMs = new Date(closesAt).getTime() - Date.now();
-  if (remainingMs <= 0) return "Tiempo cumplido";
-  const totalSec = Math.floor(remainingMs / 1000);
-  const min = Math.floor(totalSec / 60);
-  const sec = totalSec % 60;
-  return `${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
 }
 
 export function VotingStatus({
@@ -50,14 +41,14 @@ export function VotingStatus({
   const [ballotOpen, setBallotOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [timeLeft, setTimeLeft] = useState<string>(() =>
-    activeRound?.status === "open" ? formatRemaining(activeRound.closes_at) : "",
+    activeRound?.status === "open" ? formatCountdown(activeRound.closes_at).text : "",
   );
 
   useEffect(() => {
     if (!activeRound || activeRound.status !== "open") return;
 
     const interval = setInterval(() => {
-      setTimeLeft(formatRemaining(activeRound.closes_at));
+      setTimeLeft(formatCountdown(activeRound.closes_at).text);
     }, 1000);
     return () => clearInterval(interval);
   }, [activeRound]);

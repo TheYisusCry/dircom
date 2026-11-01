@@ -131,9 +131,9 @@ export function ActivityCard({
 
       {open && (
         <Modal open={open} onClose={() => setOpen(false)} title={activity.title}>
-          <div className="space-y-6 p-6 sm:p-8">
+          <div className="space-y-5 p-4 sm:space-y-6 sm:p-6">
             <p className="text-sm leading-6 text-muted">{activity.description}</p>
-            <div className="rounded-lg bg-mist p-4 text-xs leading-6 text-muted">
+            <div className="rounded-lg bg-mist p-3.5 text-xs leading-6 text-muted sm:p-4">
               Creada por <strong className="text-ink">{activity.creator.name}</strong>
               <br />
               {formatEventDate(activity.createdAt)} ·{" "}
@@ -157,7 +157,7 @@ export function ActivityCard({
 
             {/* Formulario para enviar mensaje */}
             {activity.status === "open" ? (
-              <form ref={formRef} action={msgAction} className="border-t border-line pt-5">
+              <form ref={formRef} action={msgAction} className="border-t border-line pt-4 sm:pt-5">
                 <input type="hidden" name="activity_id" value={activity.id} />
                 <label
                   htmlFor={`message-${activity.id}`}
@@ -174,9 +174,9 @@ export function ActivityCard({
                   placeholder="Por ejemplo: 4 de pollo y 2 bollos..."
                   className="auth-input mt-2 resize-none p-3 text-xs leading-5"
                 />
-                <div className="mt-2.5 flex items-center justify-between">
+                <div className="mt-3 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-[10px] text-muted">Presiona enviar para que quede anotado en la lista.</p>
-                  <Button type="submit" disabled={msgPending} className="text-xs">
+                  <Button type="submit" disabled={msgPending} className="w-full text-xs sm:w-auto">
                     {msgPending ? "Enviando..." : "Anotar mi pedido"}
                   </Button>
                 </div>

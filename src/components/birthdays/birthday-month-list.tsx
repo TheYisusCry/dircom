@@ -3,24 +3,9 @@
 import { useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Cake, CalendarDays, PartyPopper } from "@/components/ui/icon";
-import { formatCalendarDate } from "@/lib/dates";
+import { formatCalendarDate, MONTH_NAMES } from "@/lib/dates";
 import { BirthdayDetailModal } from "./birthday-detail-modal";
 import type { BirthdayCelebration, BirthdayPresentation, Employee } from "@/types";
-
-const monthNames = [
-  "Enero",
-  "Febrero",
-  "Marzo",
-  "Abril",
-  "Mayo",
-  "Junio",
-  "Julio",
-  "Agosto",
-  "Septiembre",
-  "Octubre",
-  "Noviembre",
-  "Diciembre",
-];
 
 export function BirthdayMonthList({
   employees,
@@ -37,7 +22,7 @@ export function BirthdayMonthList({
 }) {
   const [selectedBirthday, setSelectedBirthday] = useState<BirthdayPresentation | null>(null);
 
-  const monthName = monthNames[currentMonth - 1] ?? "este mes";
+  const monthName = MONTH_NAMES[currentMonth - 1] ?? "este mes";
 
   if (employees.length === 0) {
     return null;

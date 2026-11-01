@@ -41,7 +41,7 @@ export function Header({ profile }: { profile: Profile }) {
           </span>
         </Link>
         <div className="order-3 lg:order-0">
-          <Navigation />
+          <Navigation profile={profile} />
         </div>
         <div className="ml-auto flex items-center gap-1.5 pl-1 sm:gap-2.5 sm:border-l sm:border-line sm:pl-4 lg:ml-0">
           <Avatar employee={{ name, photo: avatarUrl(profile) }} size={36} />

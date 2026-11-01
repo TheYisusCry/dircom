@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { requireAdmin } from "@/lib/auth/session";
 import { Header } from "@/components/layout/header";
+import { AdminNav } from "@/components/admin/admin-nav";
 export const dynamic = "force-dynamic";
 export default async function AdminLayout({
   children,
@@ -11,28 +11,8 @@ export default async function AdminLayout({
   return (
     <>
       <Header profile={profile} />
-      <main id="contenido" className="mx-auto max-w-[1240px] px-5 py-8 sm:px-8">
-        <div className="mb-7 flex flex-wrap items-center gap-3">
-          <Link href="/admin" className="admin-link">
-            Administración
-          </Link>
-          <span className="text-line">/</span>
-          <Link href="/admin/empleados" className="admin-link">
-            Empleados
-          </Link>
-          <span className="text-line">/</span>
-          <Link href="/admin/cumpleanos" className="admin-link">
-            Cumpleaños
-          </Link>
-          <span className="text-line">/</span>
-          <Link href="/admin/votaciones" className="admin-link">
-            Votaciones
-          </Link>
-          <span className="text-line">/</span>
-          <Link href="/admin/cuenta" className="admin-link">
-            Mi cuenta
-          </Link>
-        </div>
+      <main id="contenido" className="mx-auto max-w-[1240px] px-4 py-6 sm:px-8 sm:py-8">
+        <AdminNav />
         {children}
       </main>
     </>
