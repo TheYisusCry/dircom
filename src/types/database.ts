@@ -10,6 +10,8 @@ export type Profile = {
   avatar_path: string | null;
   role: AccountRole;
   is_active: boolean;
+  consent_accepted_at?: string | null;
+  consent_version?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -235,6 +237,10 @@ export type Database = {
       };
     };
     Functions: {
+      dircom_record_consent: {
+        Args: { p_version?: string; p_user_agent?: string };
+        Returns: boolean;
+      };
       dircom_publish_voting_results: { Args: { p_round_id: string }; Returns: string };
       dircom_close_voting_round: { Args: { p_round_id: string }; Returns: boolean };
       dircom_my_profile: { Args: Empty; Returns: Profile[] };

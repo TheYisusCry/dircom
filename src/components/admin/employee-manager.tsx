@@ -100,6 +100,21 @@ export function EmployeeManager({
     employee.birthday_day && employee.birthday_month
       ? `${String(employee.birthday_day).padStart(2, "0")}/${String(employee.birthday_month).padStart(2, "0")}`
       : "Sin configurar";
+  const consentBadge = (employee: Profile) =>
+    employee.consent_accepted_at ? (
+      <span
+        title={`Firmado el ${new Date(employee.consent_accepted_at).toLocaleString("es-DO")}`}
+        className="inline-flex items-center gap-1 rounded-full bg-mint px-2 py-0.5 text-[10px] font-semibold text-forest-ink"
+      >
+        <span className="size-1.5 rounded-full bg-forest" />
+        Firmado ({new Date(employee.consent_accepted_at).toLocaleDateString("es-DO")})
+      </span>
+    ) : (
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200/60 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+        <span className="size-1.5 rounded-full bg-amber-500" />
+        Pendiente
+      </span>
+    );
   const status = (employee: Profile) => (
     <span
       className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${employee.is_active ? "bg-mint text-forest-ink" : "bg-mist text-muted"}`}
@@ -132,7 +147,7 @@ export function EmployeeManager({
           </caption>
           <thead className="border-b border-line bg-mist text-xs text-muted">
             <tr>
-              {["Empleado", "Usuario", "Cumpleaños", "Estado", "Acciones"].map(
+              {["Empleado", "Usuario", "Cumpleaños", "Consentimiento", "Estado", "Acciones"].map(
                 (label) => (
                   <th
                     scope="col"
@@ -158,6 +173,7 @@ export function EmployeeManager({
                 <td className="px-5 py-5 text-xs text-muted">
                   {birthday(employee)}
                 </td>
+                <td className="px-5 py-5">{consentBadge(employee)}</td>
                 <td className="px-5 py-5">{status(employee)}</td>
                 <td className="px-5 py-5">{actions(employee)}</td>
               </tr>
@@ -175,6 +191,9 @@ export function EmployeeManager({
               <span className="text-muted">
                 Cumpleaños: {birthday(employee)}
               </span>
+            </div>
+            <div>
+              {consentBadge(employee)}
             </div>
             {actions(employee)}
           </article>

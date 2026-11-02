@@ -7,6 +7,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { avatarUrl } from "@/lib/auth/validation";
 import { MONTH_NAMES } from "@/lib/dates";
 import { EmployeeResignation } from "@/components/profile/employee-resignation";
+import { ConsentViewerButton } from "@/components/consent/consent-viewer-button";
 import { CalendarDays, ArrowRight } from "@/components/ui/icon";
 
 export const dynamic = "force-dynamic";
@@ -108,6 +109,32 @@ export default async function EmployeeProfilePage() {
               <p className="mt-4 text-[11px] text-muted">
                 La información personal, el cargo y la fotografía son gestionados por el área de administración.
               </p>
+            </section>
+
+            {/* Privacidad y Consentimiento */}
+            <section
+              aria-labelledby="privacidad-title"
+              className="panel p-5 sm:p-7"
+            >
+              <h2 id="privacidad-title" className="text-base font-bold text-ink">
+                Privacidad y tratamiento de datos
+              </h2>
+              <p className="mt-1 text-xs text-muted">
+                Información sobre el tratamiento de tus datos personales dentro de este dashboard interno.
+              </p>
+              <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl bg-mist p-4">
+                <div>
+                  <p className="text-xs font-semibold text-ink">
+                    Consentimiento para el uso de datos en DIRCOM
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-muted">
+                    {profile.consent_accepted_at
+                      ? `Firmado digitalmente el ${new Date(profile.consent_accepted_at).toLocaleDateString("es-DO")}`
+                      : "Pendiente de firma"}
+                  </p>
+                </div>
+                <ConsentViewerButton employeeName={fullName} variant="button" />
+              </div>
             </section>
 
             {/* Zona de la cuenta y renuncia */}

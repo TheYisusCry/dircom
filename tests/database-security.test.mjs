@@ -37,6 +37,7 @@ test("migraciones y permisos en PostgreSQL local", async (t) => {
     "202611020001_coffee.sql",
     "202611020002_live_updates.sql",
     "202611020003_secure_directory_views.sql",
+    "202611020004_consent.sql",
   ])
     await db.exec(
       await readFile(
@@ -902,5 +903,51 @@ test("migraciones y permisos en PostgreSQL local", async (t) => {
     });
     assert.deepEqual((await db.query(sql)).rows, []);
   });
+
+  await t.test(
+    "consentimiento legal: registro seguro, auditoria y permisos",
+    async () => {
+      const emp1 = await account("consent_user1");
+      const sid1 = await session(emp1);
+
+      // Anon no puede registrar consentimiento
+      await db.exec("set role anon");
+      try {
+        await assert.rejects(
+          db.query("select public.dircom_record_consent('v1', 'test-agent')"),
+          /permission denied/,
+        );
+      } finally {
+        await db.exec("reset role");
+      }
+
+      // Empleado activo registra su consentimiento
+      await asUser(emp1, sid1, async () => {
+        const result = (await db.query("select public.dircom_record_consent('v1', 'Mozilla/5.0 Test')")).rows;
+        assert.equal(result[0].dircom_record_consent, true);
+
+        // Intento de escritura directa a logs de consentimiento rechazado
+        await assert.rejects(
+          db.query(
+            "insert into dircom_private.consent_logs (user_id, signer_name) values ($1, 'Hacker')",
+            [emp1],
+          ),
+          /permission denied/,
+        );
+      });
+
+      // Verificamos que el perfil tenga las columnas actualizadas
+      const profileRows = (await db.query("select * from public.profiles where id = $1", [emp1])).rows;
+      assert.equal(profileRows.length, 1);
+      assert.ok(profileRows[0].consent_accepted_at !== null);
+      assert.equal(profileRows[0].consent_version, "v1");
+
+      // Verificamos que se haya creado el registro de auditoría en dircom_private
+      const logRows = (await db.query("select * from dircom_private.consent_logs where user_id = $1", [emp1])).rows;
+      assert.equal(logRows.length, 1);
+      assert.equal(logRows[0].consent_version, "v1");
+      assert.equal(logRows[0].user_agent, "Mozilla/5.0 Test");
+    },
+  );
 
 });

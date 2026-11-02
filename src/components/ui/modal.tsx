@@ -11,6 +11,7 @@ export function Modal({
   children,
   closeOnClickOutside = true,
   maxWidth = "max-w-xl",
+  showCloseButton = true,
 }: {
   open: boolean;
   onClose: () => void;
@@ -18,6 +19,7 @@ export function Modal({
   children: ReactNode;
   closeOnClickOutside?: boolean;
   maxWidth?: string;
+  showCloseButton?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -42,7 +44,9 @@ export function Modal({
       aria-labelledby={titleId}
       onCancel={(event) => {
         event.preventDefault();
-        onClose();
+        if (showCloseButton && closeOnClickOutside) {
+          onClose();
+        }
       }}
       onClick={(event) => {
         if (!closeOnClickOutside) return;
@@ -68,14 +72,16 @@ export function Modal({
             <h2 id={titleId} className="text-lg font-bold">
               {title}
             </h2>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Cerrar ventana"
-              className="flex size-11 shrink-0 items-center justify-center rounded-full text-muted hover:bg-mist"
-            >
-              <X size={20} aria-hidden="true" />
-            </button>
+            {showCloseButton && (
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Cerrar ventana"
+                className="flex size-11 shrink-0 items-center justify-center rounded-full text-muted hover:bg-mist"
+              >
+                <X size={20} aria-hidden="true" />
+              </button>
+            )}
           </div>
           {children}
         </motion.div>

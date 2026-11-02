@@ -13,6 +13,7 @@ import { CelebrationConfetti } from "@/components/voting/celebration-confetti";
 import { ActivityBoard } from "@/components/activities/activity-board";
 import { NewActivityPreview } from "@/components/activities/new-activity-preview";
 import { CoffeeSection } from "@/components/coffee/coffee-section";
+import { ConsentViewerButton } from "@/components/consent/consent-viewer-button";
 import { useDashboard, useRevelation } from "@/components/live/dashboard-live";
 import type { DashboardData } from "@/lib/dashboard";
 import type { Profile } from "@/types/database";
@@ -128,6 +129,13 @@ export function Dashboard({ initialData, profile }: { initialData: DashboardData
             isAdmin={profile.role === "admin"}
           />
         </section>
+        <footer className="mt-12 border-t border-line py-6 text-center text-xs text-muted flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p>© {new Date().getFullYear()} DIRCOM. Espacio interno del equipo.</p>
+          <ConsentViewerButton
+            employeeName={`${profile.first_name} ${profile.last_name}`}
+            variant="link"
+          />
+        </footer>
       </MainContainer>
     </>
   );
