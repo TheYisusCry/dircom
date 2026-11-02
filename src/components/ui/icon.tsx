@@ -40,7 +40,6 @@ export const Clock3 = symbol("schedule");
 export const Coffee = symbol("coffee");
 export const CircleHelp = symbol("help");
 export const LockKeyhole = symbol("lock");
-export const LogOut = symbol("logout");
 export const LayoutDashboard = symbol("dashboard");
 export const MapPin = symbol("location_on");
 export const Medal = symbol("workspace_premium");
@@ -163,6 +162,34 @@ export function AlertTriangle({
       <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
       <line x1="12" x2="12" y1="9" y2="13" />
       <line x1="12" x2="12.01" y1="17" y2="17" />
+    </svg>
+  );
+}
+
+export function LogOut({
+  size = 20,
+  className = "",
+  style,
+  ...props
+}: SvgIconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className={className}
+      style={style}
+      {...props}
+    >
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <polyline points="16 17 21 12 16 7" />
+      <line x1="21" x2="9" y1="12" y2="12" />
     </svg>
   );
 }
