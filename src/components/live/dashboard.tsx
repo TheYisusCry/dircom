@@ -18,7 +18,7 @@ import type { DashboardData } from "@/lib/dashboard";
 import type { Profile } from "@/types/database";
 
 export function Dashboard({ initialData, profile }: { initialData: DashboardData; profile: Profile }) {
-  const { data, connection } = useDashboard(initialData);
+  const { data, connection, stale } = useDashboard(initialData);
   const { birthday, upcomingBirthdays, todayIso } = data.birthdays;
   const { activeRound, publishedRound, hasVoted, candidates } = data.voting;
   const { remaining, celebrationKey } = useRevelation(publishedRound, data.voting.serverNow);
@@ -29,7 +29,7 @@ export function Dashboard({ initialData, profile }: { initialData: DashboardData
     <>
       <CelebrationConfetti triggerKey={celebrationKey} />
       <MainContainer>
-        {connection !== "connected" && <p role="status" className="mb-3 text-xs text-muted">{connection === "connecting" ? "Conectando actualizaciones en directo…" : "Reconectando actualizaciones. Los datos se comprueban periódicamente."}</p>}
+        {(connection !== "connected" || stale) && <p role="status" className="mb-3 text-xs text-muted">{stale ? "Algunos datos no se pudieron actualizar. Reintentando…" : connection === "connecting" ? "Conectando actualizaciones en directo…" : "Reconectando actualizaciones. Los datos se comprueban periódicamente."}</p>}
         <UserGreeting
           profile={{ name: `${profile.first_name} ${profile.last_name}` }}
         />
@@ -90,8 +90,8 @@ export function Dashboard({ initialData, profile }: { initialData: DashboardData
             </div>
           ) : (
             <EmptyState
-              title="Votación de la semana por comenzar"
-              description="Cuando el administrador inicie y publique los resultados de la votación semanal, el podio y el empleado destacado se mostrarán aquí."
+              title={publishedRound && !activeRound ? "La ronda terminó sin votos" : "Votación de la semana por comenzar"}
+              description={publishedRound && !activeRound ? "No se ha asignado un ganador en esta ronda." : "Cuando el administrador inicie y publique los resultados de la votación semanal, el podio y el empleado destacado se mostrarán aquí."}
             />
           )}
           {remaining === 0 && <VotingStatus

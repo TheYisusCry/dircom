@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { DashboardData, DashboardScope } from "@/lib/dashboard";
 import type { VotingRoundRow } from "@/types/database";
@@ -8,7 +9,9 @@ import { revelationRemaining } from "@/lib/live";
 import { onLiveChange, useLive } from "./live-provider";
 
 export function useDashboard(initialData: DashboardData) {
+  const router = useRouter();
   const { connection } = useLive();
+  const [failed, setFailed] = useState<DashboardScope[]>([]);
   const [snapshot, setSnapshot] = useState({ source: initialData, data: initialData });
   if (snapshot.source !== initialData) setSnapshot({ source: initialData, data: initialData });
 
@@ -19,22 +22,35 @@ export function useDashboard(initialData: DashboardData) {
     const timers = new Map<DashboardScope, ReturnType<typeof setTimeout>>();
     const controller = new AbortController();
     const lastRead = new Map<DashboardScope, number>();
+    const retryAt = new Map<DashboardScope, number>();
+    const failures = new Map<DashboardScope, number>();
     let day = getOfficeCurrentDate().todayIso;
 
     async function update(scope: DashboardScope) {
       if (disposed || document.visibilityState !== "visible") return;
+      if (Date.now() < (retryAt.get(scope) ?? 0)) return;
       if (pending.has(scope)) { dirty.add(scope); return; }
       pending.add(scope);
+      lastRead.set(scope, Date.now());
       try {
         const response = await fetch(`/api/dashboard/${scope}`, { cache: "no-store", signal: controller.signal });
-        if (response.status === 401) { window.location.assign("/login"); return; }
+        if (response.status === 401) { router.replace("/login"); return; }
         if (!response.ok) throw new Error("Actualización pendiente");
         const section = await response.json();
         if (!disposed) {
           setSnapshot((current) => ({ ...current, data: { ...current.data, [scope]: section } }));
           lastRead.set(scope, Date.now());
+          retryAt.delete(scope); failures.delete(scope);
+          setFailed((current) => current.filter((section) => section !== scope));
         }
-      } catch { /* Keep the last successful snapshot; retry on the next tick. */ }
+      } catch {
+        if (!disposed) {
+          const attempts = (failures.get(scope) ?? 0) + 1;
+          failures.set(scope, attempts);
+          retryAt.set(scope, Date.now() + Math.min(120_000, 15_000 * 2 ** (attempts - 1)));
+          setFailed((current) => current.includes(scope) ? current : [...current, scope]);
+        }
+      }
       finally {
         pending.delete(scope);
         if (!disposed && dirty.delete(scope)) schedule(scope);
@@ -65,7 +81,7 @@ export function useDashboard(initialData: DashboardData) {
     }, 1000);
     for (const scope of ["birthdays", "coffee", "activities", "voting"] as const) lastRead.set(scope, Date.now());
     // Connect first, then read: don't lose changes between SSR and subscription.
-    resume();
+    schedule("activities"); schedule("voting");
     window.addEventListener("focus", resume);
     window.addEventListener("online", resume);
     document.addEventListener("visibilitychange", resume);
@@ -79,39 +95,51 @@ export function useDashboard(initialData: DashboardData) {
       window.removeEventListener("online", resume);
       document.removeEventListener("visibilitychange", resume);
     };
-  }, [connection]);
-  return { data: snapshot.data, connection };
+  }, [connection, router, initialData]);
+  return { data: snapshot.data, connection, stale: failed.length > 0 };
 }
 
 export function useRevelation(round: VotingRoundRow | null, snapshotTime: number) {
-  const { serverNow } = useLive();
-  const [state, setState] = useState({ remaining: revelationRemaining(round?.reveal_at, snapshotTime), celebrationKey: "" });
+  const { serverNow, synchronized } = useLive();
+  const id = round?.id;
+  const revealAt = round?.reveal_at;
+  const [state, setState] = useState({ id, now: snapshotTime, celebrationKey: "" });
   const waiting = useRef<string | null>(null);
   const observed = useRef<string | null>(null);
-  const revealAt = round?.reveal_at;
-  const id = round?.id;
   useEffect(() => {
+    if (!round?.reveal_at || revelationRemaining(round.reveal_at, snapshotTime) === 0) return;
+    for (const place of round.podium ?? []) {
+      if (place.employee_photo) { const image = new Image(); image.src = place.employee_photo; }
+    }
+  }, [round, snapshotTime]);
+  useEffect(() => {
+    const started = performance.now();
+    let timer: ReturnType<typeof setInterval> | undefined;
     function tick() {
-      const now = serverNow();
+      // Until the credential request calibrates the clock, advance the SSR
+      // timestamp monotonically instead of trusting the computer's wall clock.
+      const now = synchronized ? serverNow() : snapshotTime + performance.now() - started;
       const remaining = revelationRemaining(revealAt, now);
       if (remaining > 0 && id) waiting.current = id;
-      setState((current) => {
-        let celebrationKey = current.celebrationKey;
-        if (id && waiting.current === id && remaining === 0 && observed.current !== id) {
-          observed.current = id;
-          const storageKey = `dircom:revealed:${id}`;
-          let seen = false;
-          try { seen = sessionStorage.getItem(storageKey) === "1"; sessionStorage.setItem(storageKey, "1"); } catch { /* storage may be disabled */ }
-          if (!seen && document.visibilityState === "visible" && revealAt && now - Date.parse(revealAt) < 4000) celebrationKey = id;
-        }
-        return current.remaining === remaining && current.celebrationKey === celebrationKey ? current : { remaining, celebrationKey };
-      });
+      let celebrate = false;
+      if (id && waiting.current === id && remaining === 0 && observed.current !== id) {
+        observed.current = id;
+        const storageKey = `dircom:revealed:${id}`;
+        let seen = false;
+        try { seen = sessionStorage.getItem(storageKey) === "1"; sessionStorage.setItem(storageKey, "1"); } catch { /* storage may be disabled */ }
+        celebrate = !seen && document.visibilityState === "visible" && Boolean(revealAt) && now - Date.parse(revealAt!) < 4000;
+      }
+      setState((current) => current.id === id && !celebrate && Math.ceil(revelationRemaining(revealAt, current.now) / 1000) === Math.ceil(remaining / 1000)
+        ? current : { id, now, celebrationKey: celebrate ? id! : current.celebrationKey });
+      if (remaining === 0) clearInterval(timer);
     }
-    const timer = setInterval(tick, 50);
+    if (revealAt && revelationRemaining(revealAt, snapshotTime) > 0) timer = setInterval(tick, 50);
     const immediate = setTimeout(tick, 0);
     document.addEventListener("visibilitychange", tick);
     return () => { clearInterval(timer); clearTimeout(immediate); document.removeEventListener("visibilitychange", tick); };
-  }, [id, revealAt, serverNow]);
-  // Hide a newly received podium immediately, before the timer's next tick.
-  return { remaining: revealAt && state.remaining === 0 && Date.parse(revealAt) > snapshotTime ? revelationRemaining(revealAt, serverNow()) : state.remaining, celebrationKey: state.celebrationKey };
+  }, [id, revealAt, serverNow, synchronized, snapshotTime]);
+  return {
+    remaining: revelationRemaining(revealAt, state.id === id ? state.now : snapshotTime),
+    celebrationKey: state.celebrationKey,
+  };
 }

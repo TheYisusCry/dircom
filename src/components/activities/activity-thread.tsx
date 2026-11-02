@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { ActivityMessage } from "@/types";
 import { mergeMessages } from "@/lib/live";
@@ -11,6 +12,7 @@ type MessagePage = { messages: ActivityMessage[]; hasMore: boolean };
 const cursorFor = (message: ActivityMessage) => `${message.sentAt}|${message.id}`;
 
 export function ActivityThread({ activityId }: { activityId: string }) {
+  const router = useRouter();
   const { connection } = useLive();
   const [messages, setMessages] = useState<ActivityMessage[]>([]);
   const [hasOlder, setHasOlder] = useState(false);
@@ -18,18 +20,18 @@ export function ActivityThread({ activityId }: { activityId: string }) {
   const [error, setError] = useState("");
   const newest = useRef<ActivityMessage | undefined>(undefined);
   const oldest = useRef<ActivityMessage | undefined>(undefined);
-  const busy = useRef(false);
   const loadOlder = useRef<() => void>(() => {});
 
   useEffect(() => {
     let disposed = false;
     let queued = false;
+    let busy = false;
     let timer: ReturnType<typeof setTimeout>;
     const controller = new AbortController();
     async function read(older = false) {
       if (disposed || document.visibilityState !== "visible") return;
-      if (busy.current) { queued = true; return; }
-      busy.current = true;
+      if (busy) { queued = true; return; }
+      busy = true;
       setLoading(true);
       try {
         let more = true;
@@ -37,7 +39,7 @@ export function ActivityThread({ activityId }: { activityId: string }) {
           const anchor = older ? oldest.current : newest.current;
           const suffix = anchor ? `?${older ? "before" : "after"}=${encodeURIComponent(cursorFor(anchor))}` : "";
           const response = await fetch(`/api/activities/${activityId}/messages${suffix}`, { cache: "no-store", signal: controller.signal });
-          if (response.status === 401) { window.location.assign("/login"); return; }
+          if (response.status === 401) { router.replace("/login"); return; }
           if (!response.ok) throw new Error(response.status === 404 ? "La actividad ya no está disponible." : "No se pudieron actualizar los mensajes.");
           const page = await response.json() as MessagePage;
           if (disposed) return;
@@ -50,7 +52,7 @@ export function ActivityThread({ activityId }: { activityId: string }) {
       } catch (cause) {
         if (!disposed) setError(cause instanceof Error ? cause.message : "No se pudieron cargar los mensajes.");
       } finally {
-        busy.current = false;
+        busy = false;
         if (!disposed) {
           setLoading(false);
           if (queued) { queued = false; timer = setTimeout(() => void read(), 150); }
@@ -78,7 +80,7 @@ export function ActivityThread({ activityId }: { activityId: string }) {
       window.removeEventListener("focus", resume);
       document.removeEventListener("visibilitychange", resume);
     };
-  }, [activityId, connection]);
+  }, [activityId, connection, router]);
 
   return <div>
     <h4 className="mb-3 text-xs font-bold uppercase">Pedidos y notas anotadas</h4>

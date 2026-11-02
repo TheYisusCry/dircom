@@ -1,9 +1,12 @@
+import { AdminLiveRefresh } from "@/components/live/admin-live-refresh";
 import { requireAdmin } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { VotingAdminManager } from "@/components/admin/voting-admin-manager";
 import type { VotingRoundRow } from "@/types/database";
 
 export const dynamic = "force-dynamic";
+
+async function getSnapshotTime() { return Date.now(); }
 
 export default async function AdminVotacionesPage() {
   await requireAdmin();
@@ -47,15 +50,18 @@ export default async function AdminVotacionesPage() {
     .order("created_at", { ascending: false })
     .limit(10);
 
+  const snapshotTime = await getSnapshotTime();
   const pastRounds = (pastRoundsRes.data ?? []) as VotingRoundRow[];
 
   return (
     <>
+      <AdminLiveRefresh />
       <h1 className="text-3xl font-extrabold tracking-tight">Votaciones y Reconocimiento</h1>
       <p className="mb-7 mt-2 text-sm text-muted">
         Abre votaciones programadas de 15 minutos, monitorea la participación y publica al ganador de la semana.
       </p>
       <VotingAdminManager
+        snapshotTime={snapshotTime}
         activeRound={activeRound}
         pastRounds={pastRounds}
         totalEmployees={totalEmployees}

@@ -33,6 +33,7 @@ test("migraciones y permisos en PostgreSQL local", async (t) => {
     "202610300003_activities.sql",
     "202610300004_flexible_username.sql",
     "202611020001_coffee.sql",
+    "202611020002_live_updates.sql",
   ])
     await db.exec(
       await readFile(
@@ -764,4 +765,59 @@ test("migraciones y permisos en PostgreSQL local", async (t) => {
       }
     },
   );
+  await t.test("revelacion: permisos, cierre, recuento y publicaciones repetidas", async () => {
+    const voter = await account("live_voter");
+    const candidate = await account("live_candidate");
+    const voterSession = await session(voter);
+    const adminSession = await session(root);
+    const roundId = randomUUID();
+    await db.query("insert into public.voting_rounds(id,title,week_label,opens_at,closes_at) values($1,'Prueba en directo','Semana live',clock_timestamp() - interval '1 minute',clock_timestamp() + interval '15 minutes')", [roundId]);
+    await asUser(voter, voterSession, async () => {
+      await assert.rejects(db.query("select public.dircom_close_voting_round($1)", [roundId]), /administrador/);
+      await assert.rejects(db.query("select public.dircom_publish_voting_results($1)", [roundId]), /administrador/);
+      await db.query("select public.cast_vote($1,$2)", [roundId, candidate]);
+    });
+    await asUser(root, adminSession, async () => {
+      await assert.rejects(db.query("select public.dircom_publish_voting_results($1)", [roundId]), /cerrar/);
+      await db.query("select public.dircom_close_voting_round($1)", [roundId]);
+    });
+    const late = await account("live_late");
+    const lateSession = await session(late);
+    await asUser(late, lateSession, async () => {
+      await assert.rejects(db.query("select public.cast_vote($1,$2)", [roundId, candidate]), /abierta/);
+    });
+    await asUser(root, adminSession, async () => {
+      const first = (await db.query("select public.dircom_publish_voting_results($1) as at", [roundId])).rows[0].at;
+      const second = (await db.query("select public.dircom_publish_voting_results($1) as at", [roundId])).rows[0].at;
+      assert.equal(String(first), String(second));
+      const round = (await db.query("select *, reveal_at > clock_timestamp() + interval '8 seconds' as future from public.voting_rounds where id=$1", [roundId])).rows[0];
+      assert.equal(round.status, "published");
+      assert.equal(round.future, true);
+      assert.equal(round.winner_id, candidate);
+      assert.equal(round.podium[0].votes, 1);
+      assert.equal(round.podium[0].position, 1);
+      await assert.rejects(db.query("select public.dircom_close_voting_round($1)", [roundId]), /publicada/);
+    });
+    await asUser(voter, voterSession, async () => {
+      await assert.rejects(db.query("select * from public.voting_votes"), /permission denied/);
+      assert.equal((await db.query("select reveal_at from public.voting_rounds where id=$1", [roundId])).rows.length, 1);
+    });
+    await db.exec("set role anon");
+    try {
+      await assert.rejects(db.query("select public.dircom_publish_voting_results($1)", [roundId]), /permission denied/);
+    } finally { await db.exec("reset role"); }
+  });
+
+  await t.test("revelacion sin votos conserva podio vacio y no inventa ganador", async () => {
+    const roundId = randomUUID();
+    const adminSession = await session(root);
+    await db.query("insert into public.voting_rounds(id,title,week_label,status,opens_at,closes_at) values($1,'Sin votos','Semana vacia','closed',clock_timestamp() - interval '2 minutes',clock_timestamp() - interval '1 minute')", [roundId]);
+    await asUser(root, adminSession, async () => {
+      await db.query("select public.dircom_publish_voting_results($1)", [roundId]);
+      const round = (await db.query("select * from public.voting_rounds where id=$1", [roundId])).rows[0];
+      assert.equal(round.winner_id, null);
+      assert.deepEqual(round.podium, []);
+    });
+  });
+
 });

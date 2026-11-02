@@ -53,8 +53,8 @@ begin
     select candidate_id, count(*) as votes from public.voting_votes
       where round_id = p_round_id group by candidate_id
   ), ranked as (
-    -- Existing schema has no tie-break rule. UUID is a deterministic fallback.
-    select *, row_number() over (order by votes desc, candidate_id) as position from tally
+    -- Preserve the existing vote-count ranking; no new business tie-break rule.
+    select *, row_number() over (order by votes desc) as position from tally
   )
   select coalesce(jsonb_agg(jsonb_build_object(
     'position', r.position, 'employee_id', r.candidate_id,
@@ -84,7 +84,7 @@ grant execute on function public.dircom_publish_voting_results(uuid) to authenti
 
 create or replace function dircom_private.cast_vote(p_round_id uuid, p_candidate_id uuid)
 returns boolean
-language plpgsql security definer set search_path = '' as $
+language plpgsql security definer set search_path = '' as $$
 declare
   v_voter_id uuid := auth.uid();
   v_round record;
@@ -132,7 +132,7 @@ begin
 
   return true;
 end;
-$;
+$$;
 
 
 -- Supabase owns this publication. In local PostgreSQL test environments it may

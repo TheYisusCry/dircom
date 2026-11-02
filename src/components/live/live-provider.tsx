@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { usePathname } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import { serverClockOffset } from "@/lib/live";
@@ -19,13 +19,15 @@ export function onLiveChange(listener: (change: LiveChange) => void) {
 }
 
 type Connection = "connecting" | "connected" | "disconnected";
-const LiveContext = createContext({ connection: "connecting" as Connection, serverNow: () => Date.now() });
+const LiveContext = createContext({ connection: "connecting" as Connection, synchronized: false, serverNow: () => Date.now() });
 export const useLive = () => useContext(LiveContext);
 
 export function LiveProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const enabled = pathname !== "/login" && pathname !== "/acceso-denegado";
   const [connection, setConnection] = useState<Connection>("connecting");
+  const [synchronized, setSynchronized] = useState(false);
   const clock = useRef<{ server: number; monotonic: number } | null>(null);
   const [serverNow] = useState(() => () => clock.current
     ? clock.current.server + performance.now() - clock.current.monotonic
@@ -37,6 +39,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
     let client: ReturnType<typeof createClient<Database>> | undefined;
     let authTimer: ReturnType<typeof setTimeout>;
     let authenticating = false;
+    let currentToken: string | null = null;
     const controller = new AbortController();
 
     async function authenticate() {
@@ -46,14 +49,17 @@ export function LiveProvider({ children }: { children: ReactNode }) {
       try {
         const started = Date.now();
         const response = await fetch("/api/realtime/session", { cache: "no-store", signal: controller.signal });
-        if (response.status === 401) { window.location.assign("/login"); return; }
+        if (response.status === 401) { router.replace("/login"); return; }
         if (!response.ok) throw new Error("Conexión no disponible");
         const session = await response.json() as { accessToken: string; expiresAt: number; serverNow: number };
         if (disposed) return;
         const ended = Date.now();
         clock.current = { server: ended + serverClockOffset(session.serverNow, started, ended), monotonic: performance.now() };
+        setSynchronized(true);
+        currentToken = session.accessToken;
         if (!client) {
           client = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
+            accessToken: async () => currentToken,
             auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
           });
           await client.realtime.setAuth(session.accessToken);
@@ -102,7 +108,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
       document.removeEventListener("visibilitychange", resume);
       void client?.removeAllChannels();
     };
-  }, [enabled, serverNow]);
+  }, [enabled, serverNow, router]);
 
-  return <LiveContext.Provider value={{ connection, serverNow }}>{children}</LiveContext.Provider>;
+  return <LiveContext.Provider value={{ connection, synchronized, serverNow }}>{children}</LiveContext.Provider>;
 }

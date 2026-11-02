@@ -1,5 +1,6 @@
 "use client";
 
+import { useRevelation } from "@/components/live/dashboard-live";
 import { useActionState, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
@@ -27,15 +28,19 @@ import {
 
 export function VotingAdminManager({
   activeRound,
+  snapshotTime,
   pastRounds,
   totalEmployees,
   ballotsCount,
 }: {
   activeRound: VotingRoundRow | null;
+  snapshotTime: number;
   pastRounds: VotingRoundRow[];
   totalEmployees: number;
   ballotsCount: number;
 }) {
+  const { remaining } = useRevelation(pastRounds[0] ?? null, snapshotTime);
+  const visiblePastRounds = remaining > 0 ? pastRounds.slice(1) : pastRounds;
   const [modalOpen, setModalOpen] = useState(false);
   const [countdown, setCountdown] = useState(() =>
     activeRound?.status === "open"
@@ -64,6 +69,7 @@ export function VotingAdminManager({
   return (
     <>
       <div className="space-y-6">
+        {remaining > 0 && <p role="status" className="panel p-5 text-sm font-semibold">El podio se revela en {Math.ceil(remaining / 1000)} segundos. Abre la portada para celebrar con el equipo.</p>}
         <FormFeedback state={closeState} />
         <FormFeedback state={publishState} />
 
@@ -176,7 +182,7 @@ export function VotingAdminManager({
                     <Trophy size={16} />
                     {publishPending
                       ? "Calculando podio..."
-                      : "Publicar resultados y revelar podio"}
+                      : "Revelar podio en 10 segundos"}
                   </Button>
                 </form>
               )}
@@ -205,11 +211,11 @@ export function VotingAdminManager({
             Rondas de reconocimiento anteriores y podios publicados.
           </p>
 
-          {pastRounds.length === 0 ? (
+          {visiblePastRounds.length === 0 ? (
             <p className="mt-4 text-xs text-muted">No hay rondas anteriores registradas.</p>
           ) : (
             <div className="mt-4 grid gap-3">
-              {pastRounds.map((round) => (
+              {visiblePastRounds.map((round) => (
                 <div
                   key={round.id}
                   className="panel flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
