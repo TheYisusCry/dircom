@@ -1,8 +1,8 @@
 # DIRCOM
 
-Plataforma privada de equipo. La etapa 2 incorpora Supabase Auth, PostgreSQL y fotografías privadas, conservando el dashboard, Plus Jakarta Sans, los iconos locales y el verde `#439441`.
+Plataforma privada de trabajo para el equipo DIRCOM, construida con Next.js y Supabase. Incluye cuentas de empleados, fotografías privadas, cumpleaños, actividades con pedidos y notas, votación de empleado de la semana y organización de aportes de café.
 
-El usuario del header y del saludo procede de la sesión real. Cumpleaños destacados, reconocimientos, votaciones y actividades siguen utilizando los ejemplos de la etapa 1 y están identificados como demostrativos. No se ha implementado la etapa 3 ni desplegado la aplicación.
+Los módulos utilizan datos de Supabase. El código de actualizaciones en directo está implementado; su activación requiere aplicar la migración correspondiente y verificar la publicación Realtime en el proyecto remoto. El estado del alojamiento y la aplicación de esa migración no se han comprobado desde este repositorio.
 
 ## Preparación y ejecución
 
@@ -13,77 +13,111 @@ npm ci
 Copy-Item .env.example .env.local
 ```
 
-Completa `.env.local` con los valores reales del proyecto:
+Si ya existe `.env.local`, conserva su configuración. Completa estas variables con valores del mismo proyecto Supabase:
 
-- `NEXT_PUBLIC_SUPABASE_URL`: URL del proyecto, desde **Connect**.
-- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: clave pública del mismo proyecto.
-- `SUPABASE_SERVICE_ROLE_KEY`: clave privada de servidor. El nombre previsto se conserva; acepta una clave actual `sb_secret_...` o una `service_role` heredada.
+- `NEXT_PUBLIC_SUPABASE_URL`: URL del proyecto.
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: clave pública.
+- `SUPABASE_SERVICE_ROLE_KEY`: clave privada, exclusiva del servidor; admite una clave actual `sb_secret_...` o una `service_role` heredada.
 
-No publiques `.env.local` ni compartas la clave privada en el chat. La plantilla tiene valores vacíos; no hay conexión ni usuarios precargados.
+No publiques `.env.local` ni agregues `NEXT_PUBLIC_` a la clave privada. La plantilla no incluye credenciales reales.
 
-**Sigue [la guía de Supabase](docs/SUPABASE_SETUP.md)** para desactivar el registro público, ejecutar las migraciones en orden, verificar Storage y crear el administrador. Después:
+La [guía de Supabase](docs/SUPABASE_SETUP.md) documenta la configuración inicial de Auth, perfiles y fotografías. Para una instalación nueva, aplica los archivos de `supabase/migrations/` en orden de nombre. En una instalación existente, aplica únicamente los pendientes. Las migraciones posteriores incorporan cumpleaños, votaciones, actividades, usernames flexibles, café y actualizaciones en directo.
+
+**Limitación de la guía inicial:** todavía referencia `npm run bootstrap:admin` y `scripts/recover-admin.mjs`, que no existen en este checkout. No son comandos ejecutables actualmente; la provisión de una primera cuenta administradora requiere resolver ese procedimiento antes de usar una instalación nueva. Una instalación con administrador existente no necesita repetirlo. Las variables `DIRCOM_ADMIN_*` de la plantilla son referencias de ese procedimiento anterior y no intervienen en el funcionamiento cotidiano.
+
+Para desarrollo:
 
 ```powershell
 npm run dev
 ```
 
-Abre `http://localhost:3000/login`. Reinicia el servidor después de cambiar variables. Sin configuración, el login informa que el acceso está en preparación y sus controles quedan deshabilitados; no simula una sesión.
-
-Para crear el primer administrador, configura temporalmente `DIRCOM_ADMIN_USERNAME`, `DIRCOM_ADMIN_PASSWORD`, `DIRCOM_ADMIN_FIRST_NAME` y `DIRCOM_ADMIN_LAST_NAME` y ejecuta:
-
-```powershell
-npm run bootstrap:admin
-```
-
-Retira esas cuatro variables cuando termine. El proceso manual se niega a crear un segundo administrador y no tiene endpoint HTTP. La guía incluye recuperación de emergencia de la cuenta principal desde un entorno confiable.
-
-Ese archivo se utiliza únicamente para crear la primera cuenta. Después, las contraseñas de empleados se asignan desde **Administración → Empleados** y la del administrador desde **Administración → Mi cuenta**. Las contraseñas admiten 6–64 caracteres sin exigir mayúsculas, números ni símbolos (máximo 72 bytes por compatibilidad con Auth).
+Abre `http://localhost:3000/login`. Reinicia el servidor después de cambiar variables. Sin configuración, el login informa que el acceso está en preparación; no simula una sesión.
 
 ## Funciones disponibles
 
-- `/login`: usuario y contraseña, errores genéricos, carga y limitación persistente de intentos.
-- `/`: dashboard privado, perfil real, foto o avatar, cargo y cierre de sesión.
-- `/admin`: resumen real de cuentas, visible únicamente para el administrador.
-- `/admin/empleados`: lista paginada, alta, edición de nombre/cargo/cumpleaños/foto, contraseña nueva y activación/desactivación. No hay límite fijo de 12 cuentas.
-- `/admin/cuenta`: el administrador cambia su propia contraseña desde el panel y vuelve a iniciar sesión con la nueva.
-- `/acceso-denegado`: respuesta para empleados que intentan acceder al panel.
-- `/api/avatars/[id]`: fotografías comprobando la sesión, sin caché pública.
+- `/login`: acceso por usuario y contraseña, mensajes de error genéricos y limitación persistente de intentos.
+- `/`: portada privada con cumpleaños próximos, empleado destacado, podio, votación, café y actividades.
+- Actividades: creación de planes, pedidos y notas, cierre y eliminación por el creador o administrador. Las tarjetas muestran los tres mensajes más recientes y el total; el modal carga el historial en páginas de 50 mensajes.
+- `/perfil`: perfil del empleado y renuncia con desactivación de su cuenta.
+- `/admin`: resumen de cuentas, exclusivo del administrador.
+- `/admin/empleados`: lista paginada, contador de empleados activos, alta, edición de datos y fotografía, restablecimiento de contraseña y activación/desactivación. No hay un límite fijo de 12 cuentas.
+- `/admin/cumpleanos`: gestión de las celebraciones del equipo.
+- `/admin/votaciones`: apertura y cierre de rondas, participación y publicación del podio.
+- `/admin/cafe`: registro y eliminación de entregas de café, estados de aportes y clasificación histórica.
+- `/admin/cuenta`: cambio de contraseña del administrador, seguido de un nuevo inicio de sesión.
+- `/acceso-denegado`: respuesta para empleados que intentan acceder al panel administrativo.
 
-Los empleados pueden consultar los campos públicos internos de perfiles activos, pero no modificarlos. No hay registro público, recuperación por correo ni cambio de contraseña por empleados. Los identificadores, usernames y roles son inmutables. La cuenta administradora principal no puede desactivarse ni eliminarse mediante estas operaciones.
+No hay registro público, recuperación pública por correo ni cambio de contraseña por empleados. Los identificadores, usernames y roles son inmutables. La cuenta administradora principal no puede desactivarse ni eliminarse mediante estas operaciones.
+
+## Actualizaciones sin recargar la página
+
+Se utiliza una conexión Supabase Realtime por pestaña autenticada, compartida por actividades, mensajes y rondas de votación. Los eventos provocan lecturas de la sección afectada; no se consulta toda la portada por cada mensaje. Las escrituras continúan pasando por las acciones de servidor existentes.
+
+- **Actividades y modal:** cambios mediante Realtime, recuperación de mensajes nuevos por cursor y deduplicación por identificador. Recibir mensajes conserva el borrador de otro usuario.
+- **Votación y podio:** el servidor prepara el resultado y guarda una hora de revelación diez segundos después. Los navegadores muestran una cuenta regresiva usando la referencia horaria del servidor y revelan el mismo podio. El cierre y el recuento bloquean la ronda en PostgreSQL; repetir una publicación conserva el resultado y su hora.
+- **Cumpleaños/directorio:** comprobación cada cinco minutos, al recuperar el foco y al cambiar el día en `America/La_Paz`.
+- **Café:** comprobación cada minuto mientras la página esté visible.
+- **Acciones propias:** actualización después de confirmar la escritura.
+- **Recuperación:** consulta al reconectar, respaldo HTTP cada 15 segundos si Realtime está desconectado y comprobaciones cada cinco minutos para recuperar eventos perdidos. Las lecturas periódicas se pausan en pestañas ocultas. Los fallos de lectura del tablero espacian los reintentos.
+- **Panel de votaciones:** comprobación de participación cada 15 segundos, sin emitir votos individuales por Realtime.
+
+La revelación coordina la presentación visual; no garantiza el mismo milisegundo en todos los dispositivos. El podio se entrega durante la preparación a los miembros autenticados, por lo que la cuenta regresiva no lo mantiene secreto frente a quien inspeccione los datos recibidos. Las rondas antiguas sin hora de revelación siguen mostrando sus resultados sin repetir el confeti. No se introduce una nueva regla de desempate.
+
+## Activación en Supabase y despliegue en Vercel
+
+Sigue la [guía de actualizaciones en directo](docs/LIVE_UPDATES.md), que incluye comprobaciones SQL y una prueba entre navegadores.
+
+1. Comprueba las migraciones previas, incluida [la de café](supabase/migrations/202611020001_coffee.sql).
+2. Ejecuta completa [202611020002_live_updates.sql](supabase/migrations/202611020002_live_updates.sql) en el SQL Editor de Supabase. Añade la hora de revelación, el índice de mensajes y las funciones de cierre/publicación, sin eliminar los datos existentes.
+3. Verifica que `activities`, `activity_messages` y `voting_rounds` estén en la publicación `supabase_realtime`. La migración las añade si esa publicación existe. Conserva RLS y las políticas de acceso autenticado; no hace falta publicar `profiles`, `voting_votes` ni `voting_ballots_cast`.
+4. Después de aplicar la migración, despliega el código en Vercel con las tres variables de Supabase del apartado de configuración. No hay variables ni dependencias adicionales para Realtime. Si cambias variables, crea un nuevo despliegue.
+5. Comprueba mensajes, conservación del borrador, cierre de actividades, reconexión y revelación del podio con sesiones distintas.
+
+El navegador se conecta directamente a Supabase para Realtime; Vercel sirve la aplicación y las rutas HTTP. No se aloja un servidor WebSocket propio ni se necesitan tareas Cron para la cuenta regresiva.
 
 ## Arquitectura y archivos
 
 ```text
-src/app/login/                 Login y cierre de sesión mediante Server Actions
-src/app/admin/                 Rutas y acciones administrativas protegidas
-src/app/api/avatars/[id]/      Descarga privada de fotos
-src/components/auth/          Formulario de login
-src/components/admin/         Tabla, tarjetas móviles y formularios
-src/lib/supabase/              Configuración, cliente SSR y cliente administrativo
-src/lib/auth/                  Sesión, validación, fotos y compensación de altas
-src/proxy.ts                  Renovación SSR y protección inicial de rutas
-src/types/database.ts         Tipos de perfiles, roles, RPC y acciones
-supabase/migrations/          Perfiles, permisos, protección Auth y Storage
-scripts/bootstrap-admin.mjs   Creación manual de la cuenta principal
-scripts/recover-admin.mjs     Recuperación con permiso previo emitido en SQL
-tests/                        Validación, fechas, PostgreSQL y pruebas reales optativas
+src/app/page.tsx                 Portada privada y carga inicial desde el servidor
+src/app/login/                   Login y cierre de sesión
+src/app/perfil/                  Perfil y renuncia del empleado
+src/app/admin/                   Rutas y acciones administrativas protegidas
+src/app/actions/                 Escrituras de actividades, votos y café
+src/app/api/avatars/[id]/        Descarga privada de fotografías
+src/app/api/realtime/session/    Token de acceso temporal y referencia horaria
+src/app/api/dashboard/[scope]/   Lecturas autenticadas por sección
+src/app/api/activities/          Lectura paginada de mensajes
+src/components/live/            Conexión compartida, sincronización y revelación
+src/components/activities/      Tablero, tarjetas y modal de mensajes
+src/components/coffee/          Estados de aportes y clasificación
+src/lib/dashboard.ts            Consultas y modelos de presentación por sección
+src/lib/live.ts                 Reloj, revelación y mezcla de mensajes
+src/lib/coffee.ts               Cálculo de aportes y clasificación
+src/lib/supabase/               Configuración y clientes de servidor
+src/lib/auth/                   Sesión, validación y fotografías
+src/proxy.ts                    Renovación SSR y protección inicial de rutas
+supabase/migrations/            Esquema, permisos y funciones de PostgreSQL
+scripts/                        Auditoría de configuración y comprobaciones reales
+tests/                          Pruebas locales y de integración optativas
 ```
 
-Next.js 16.4 App Router, React 19.3, TypeScript estricto, Tailwind 4, Motion, `@supabase/ssr` 0.12.7, `@supabase/supabase-js` 2.117.3 y Sharp. Las fuentes se sirven localmente. El dashboard conserva los modales accesibles, navegación móvil, podio 2–1–3, celebración y estados de votación de ejemplo. Las fotografías demostrativas deben sustituirse por imágenes autorizadas del equipo cuando se conecten esos módulos.
+Next.js 16.4 App Router, React 19.3, TypeScript estricto, Tailwind 4, Motion, `@supabase/ssr` 0.12.7, `@supabase/supabase-js` 2.117.3 y Sharp. Las fuentes y los iconos se sirven localmente. Se conservan los modales accesibles, la navegación móvil y el podio 2–1–3.
 
 ## Seguridad
 
-Auth conserva y verifica las contraseñas; `profiles` nunca las contiene. El backend resuelve usernames a identidades técnicas aleatorias sin exponer un directorio de correos. Los clientes SSR verifican `getClaims()` y después consultan el perfil y la sesión vigentes en PostgreSQL. Las cookies son HttpOnly, SameSite=Lax y Secure en producción. No se guarda manualmente ningún token en localStorage; no se necesita un cliente Auth de navegador porque el acceso funciona mediante acciones de servidor.
+Supabase Auth conserva y verifica las contraseñas; `profiles` nunca las contiene. El backend resuelve usernames a identidades técnicas sin exponer un directorio de correos. Los clientes SSR verifican `getClaims()` y consultan el perfil y la sesión vigentes en PostgreSQL. Las cookies son HttpOnly, SameSite=Lax y Secure en producción.
 
-Las operaciones administrativas vuelven a comprobar el rol en el servidor. El cliente privado usa `server-only`; los roles de cliente carecen de permisos de escritura. RLS y permisos por columna permiten únicamente los datos internos necesarios. Los helpers `SECURITY DEFINER` tienen `search_path` fijo y se encuentran en `dircom_private`, que debe permanecer fuera de la Data API. Las funciones públicas son wrappers con permisos explícitos.
+Realtime obtiene un token de acceso de corta duración mediante una ruta autenticada sin caché y lo conserva en memoria, sin persistirlo en localStorage. El token de renovación y la clave administrativa permanecen en el servidor. Las lecturas HTTP comprueban la sesión y Postgres Changes utiliza los permisos de las tablas de origen.
 
-Desactivar o restablecer una contraseña invalida el acceso de sesiones anteriores mediante un corte temporal en la base de datos, además del bloqueo de Auth cuando corresponde. El JWT puede seguir siendo criptográficamente válido hasta su expiración; las políticas y la aplicación ya rechazan su acceso. Reactivar exige una nueva sesión.
+Las operaciones administrativas vuelven a comprobar el rol en el servidor. El cliente administrativo usa `server-only`; los clientes carecen de permisos de escritura directa. Las RPC autorizadas comprueban el acceso antes de operar. RLS y permisos por columna limitan la lectura a los datos internos necesarios. Los helpers `SECURITY DEFINER` tienen `search_path` fijo y están en `dircom_private`, que debe permanecer fuera de la Data API.
 
-Una restricción diferida de PostgreSQL impide cambiar contraseñas directamente a través de Auth sin un permiso administrativo de un solo uso. **Este control depende del comportamiento transaccional de Supabase Auth y requiere probarse en la instancia real antes de producción y después de actualizar Auth.** También bloquea cambios automáticos del hash por futuras migraciones de Auth; consulta las limitaciones de la guía.
+Desactivar o restablecer una contraseña invalida el acceso de sesiones anteriores mediante controles en PostgreSQL, además del bloqueo de Auth cuando corresponde. Reactivar exige una nueva sesión. El JWT puede conservar validez criptográfica hasta su expiración, aunque la aplicación y sus políticas rechacen el acceso.
 
-Las fotos admiten JPEG, PNG y WebP de hasta 3 MiB. El servidor decodifica, valida, orienta y convierte a WebP, elimina metadatos y organiza archivos por UUID. El bucket es privado y solo el backend accede a los archivos. Los empleados ven las imágenes de perfiles activos mediante `/api/avatars/[id]`, que comprueba la sesión en cada solicitud y evita caché pública. No tienen permisos de descarga directa ni de subida a Storage.
+Una restricción diferida impide cambiar contraseñas directamente mediante Auth sin un permiso administrativo de un solo uso. Este control depende del comportamiento transaccional de Supabase Auth y debe comprobarse en la instancia real antes de producción y después de actualizar Auth; consulta las limitaciones de la guía inicial.
 
-## Validación
+Las fotografías admiten JPEG, PNG y WebP de hasta 3 MiB. El servidor valida, orienta, elimina metadatos y convierte a WebP. El bucket es privado; `/api/avatars/[id]` comprueba la sesión y evita caché pública. Los empleados no acceden directamente a Storage.
+
+## Validación y estado conocido
 
 ```powershell
 npm run lint
@@ -92,10 +126,12 @@ npm test
 npm run build
 ```
 
-Las pruebas locales comprueban fechas, usernames, fortaleza de contraseña, campos editables, recuperación ante altas parciales, RLS y permisos en PostgreSQL real mediante PGlite. El esquema Auth/Storage de esa prueba es una representación local: no sustituye las llamadas HTTP a Supabase.
+La última validación de los cambios de actualizaciones en directo, realizada el **2 de noviembre de 2026**, terminó con **53 pruebas aprobadas**, lint y TypeScript correctos. Las pruebas cubren autenticación y validación, calendario, café, permisos y RLS, cierre y recuento de votaciones, publicaciones repetidas, referencia horaria y deduplicación de mensajes.
 
-La suite real está en `tests/live/supabase.test.mjs`. Se activa expresamente en **staging**, crea un empleado temporal y elimina solo sus propios registros al terminar. Configuración y pruebas manuales de rutas en [la guía](docs/SUPABASE_SETUP.md#7-validación-con-supabase-real).
+La compilación de producción **queda sin verificar**: Turbopack falló al iniciar el proceso auxiliar de CSS, también fuera del entorno restringido. Se reprodujo el mismo error con una aplicación mínima que solo importaba Tailwind, sin código de DIRCOM. No se cambiaron la configuración de estilos ni dependencias para resolverlo. Es necesario comprobar el build del despliegue antes de considerar finalizada la activación.
 
-El resultado de conectar el proyecto real y los pasos todavía pendientes se registran en [SETUP_STATUS.md](docs/SETUP_STATUS.md). Las comprobaciones de configuración no sustituyen las pruebas de login, operaciones administrativas y fotografías. `npm start` sirve el build de producción por HTTPS detrás de un proxy; para desarrollo local utiliza `npm run dev`.
+Las pruebas de PostgreSQL usan PGlite con esquemas Auth/Storage simulados. No sustituyen las pruebas de autenticación, renovación de credenciales, WebSockets y políticas contra Supabase real. La suite optativa de `tests/live/` se ejecuta expresamente en staging mediante `npm run test:live`; consulta sus requisitos en la guía inicial. La prueba manual de Realtime entre navegadores queda pendiente hasta aplicar la migración y desplegar.
 
-La revisión de dependencias conserva cinco avisos altos en la cadena de herramientas de desarrollo `eslint-config-next → fast-glob → micromatch → braces`, sin una corrección compatible disponible durante la revisión. No se ha aplicado `npm audit fix --force`.
+`npm start` sirve un build de producción existente; el HTTPS lo proporciona Vercel o el proxy del alojamiento. Para desarrollo local utiliza `npm run dev`.
+
+[SETUP_STATUS.md](docs/SETUP_STATUS.md) conserva el registro histórico de la conexión y pruebas del 13 de octubre de 2026. Sus referencias a módulos demostrativos no describen el código actual. El procedimiento vigente para activar las actualizaciones en directo está en [LIVE_UPDATES.md](docs/LIVE_UPDATES.md).
