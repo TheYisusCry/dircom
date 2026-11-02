@@ -1,5 +1,6 @@
 import "server-only";
 import { createSessionClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { calculateEmployeeCoffeeStatus, buildCoffeeLeaderboard, calculateCoffeeOfficeSummary } from "@/lib/coffee";
 import { celebrationRowToCelebration, getUpcomingBirthdays, getNextBirthday, getOfficeCurrentDate, profileToEmployee, profileToParticipant } from "@/lib/dates";
 import type { CoffeeDeliveryRow } from "@/types/coffee";
@@ -37,6 +38,10 @@ export async function loadDashboard(profile: Profile, scope?: DashboardScope) {
     return !scope || section === scope ? await query() : { data: null, error: null };
   }
   const supabase = await createSessionClient();
+  // Only called after requireProfile/getSessionProfile in the page/API routes.
+  // These server-only views expose active employees' presentation fields; all
+  // other dashboard reads retain the caller's session and row-level policies.
+  const directory = createAdminClient();
 
   const [
     profilesRes,
@@ -68,7 +73,7 @@ export async function loadDashboard(profile: Profile, scope?: DashboardScope) {
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle()),
-    run("voting", () => supabase
+    run("voting", () => directory
       .from("active_employees")
       .select("id, first_name, last_name, job_title, avatar_path")
       .neq("id", profile.id)
@@ -95,7 +100,8 @@ export async function loadDashboard(profile: Profile, scope?: DashboardScope) {
       .order("created_at", { referencedTable: "messages", ascending: false })
       .order("id", { referencedTable: "messages", ascending: false })
       .limit(3, { referencedTable: "messages" })),
-    run("coffee", () => supabase.from("coffee_members").select("*").order("first_name")),
+    run("coffee", () => directory.from("coffee_members")
+      .select("id, first_name, last_name, job_title, avatar_path, created_at").order("first_name")),
     run("coffee", () => supabase
       .from("coffee_deliveries")
       .select("*")

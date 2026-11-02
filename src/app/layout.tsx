@@ -22,8 +22,20 @@ const symbols = localFont({
 export const metadata: Metadata = {
   title: "DIRCOM · Nuestro equipo",
   description:
-    "El espacio de encuentro de DIRCOM: cumpleaños, reconocimiento y actividades de oficina. Primera etapa con datos de ejemplo.",
-  robots: { index: false, follow: false },
+    "El espacio de encuentro de DIRCOM: cumpleaños, reconocimiento y actividades de oficina.",
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true,
+      "max-video-preview": -1,
+      "max-image-preview": "none",
+      "max-snippet": -1,
+    },
+  },
 };
 
 export default function RootLayout({

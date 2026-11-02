@@ -10,7 +10,7 @@ const positions = {
     height: "h-32",
     colors: "bg-forest text-on-forest",
     ring: "ring-[#eac46a]",
-    label: "1° Lugar",
+    label: "Primer puesto",
     subtitle: "¡Gran Cafetero!",
   },
   2: {
@@ -19,7 +19,7 @@ const positions = {
     height: "h-24",
     colors: "bg-[#dfe9f1] text-ink",
     ring: "ring-[#c7d7e3]",
-    label: "2° Lugar",
+    label: "Segundo puesto",
     subtitle: "Patrocinador Estrella",
   },
   3: {
@@ -28,7 +28,7 @@ const positions = {
     height: "h-[72px]",
     colors: "bg-[#f2dfc7] text-[#77502f]",
     ring: "ring-[#dfb995]",
-    label: "3° Lugar",
+    label: "Tercer puesto",
     subtitle: "Aliado del Grano",
   },
 } as const;
@@ -87,40 +87,51 @@ export function CoffeePodium({
           return (
             <li
               key={entry.employeeId}
-              style={{ gridColumn: config.column }}
-              className="flex flex-col items-center text-center"
+              style={{ gridColumn: config.column, gridRow: 1 }}
+              className="flex min-w-0 flex-col items-center text-center"
             >
-              <div className="relative mb-2">
+              <span className="sr-only">{config.label}</span>
+              <div className="relative mb-2.5">
+                {entry.position === 1 && (
+                  <IllustratedIcon
+                    name="crown"
+                    size={26}
+                    className="absolute -top-7 left-1/2 -translate-x-1/2 -rotate-12"
+                  />
+                )}
                 <Avatar
                   employee={{ name: entry.employeeName, photo }}
-                  size={entry.position === 1 ? 52 : 44}
-                  className={`ring-2 ring-offset-2 ${config.ring}`}
+                  size={entry.position === 1 ? 58 : 46}
+                  className={`ring-[3px] ring-offset-2 ring-offset-white ${config.ring}`}
                 />
-                <span
-                  className="absolute -bottom-1 -right-1 text-sm"
-                  aria-hidden="true"
-                >
-                  <IllustratedIcon name={config.medal} size={18} />
-                </span>
               </div>
 
-              <strong className="block w-full truncate text-xs font-bold text-ink">
-                {entry.employeeName.split(" ")[0]}
-              </strong>
-              <span className="text-[10px] font-semibold text-forest-ink">
-                {entry.totalPackages} {entry.totalPackages === 1 ? "paquete" : "paquetes"}
-              </span>
+              <div className="flex min-h-10 flex-col items-center justify-center">
+                <strong className="block w-full truncate text-[11px] font-bold text-ink sm:text-xs">
+                  {entry.employeeName.split(" ")[0]}
+                </strong>
+                <span className="text-[10px] font-semibold text-forest-ink">
+                  {entry.totalPackages} {entry.totalPackages === 1 ? "paquete" : "paquetes"}
+                </span>
+              </div>
 
               <div
-                className={`mt-2 flex w-full ${config.height} flex-col items-center justify-between rounded-t-xl p-2 ${config.colors}`}
+                className={`podium-step mt-2 flex w-full flex-col items-center justify-center rounded-t-xl ${config.height} ${config.colors}`}
+                style={{
+                  animationDelay: `${entry.position === 1 ? 140 : entry.position === 2 ? 70 : 0}ms`,
+                }}
+                aria-hidden="true"
               >
-                <span className="text-[11px] font-extrabold uppercase tracking-wider">
-                  {config.label}
-                </span>
-                <span className="text-[10px] opacity-90 hidden sm:inline">
-                  {config.subtitle}
+                <IllustratedIcon name={config.medal} size={28} />
+                <span className="mt-1 text-[24px] font-extrabold leading-none">
+                  {entry.position}
+                  <span className="text-xs">º</span>
                 </span>
               </div>
+
+              <span className="mt-2 text-[9px] font-medium text-muted sm:text-[10px]">
+                {config.subtitle}
+              </span>
             </li>
           );
         })}

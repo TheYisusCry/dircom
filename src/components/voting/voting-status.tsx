@@ -203,7 +203,6 @@ function InfoModal({ open, onClose }: { open: boolean; onClose: () => void }) {
           <ul className="list-inside list-disc space-y-1">
             <li><strong>Voto único y secreto:</strong> Cada empleado emite 1 solo voto anónimo.</li>
             <li><strong>Sin auto-voto:</strong> No puedes votarte a ti mismo.</li>
-            <li><strong>Exclusión del admin:</strong> El administrador no vota ni puede ser votado.</li>
             <li><strong>Tiempo limitado:</strong> La votación permanece abierta durante 15 minutos.</li>
           </ul>
         </div>

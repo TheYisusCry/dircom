@@ -105,6 +105,8 @@ Next.js 16.4 App Router, React 19.3, TypeScript estricto, Tailwind 4, Motion, `@
 
 ## Seguridad
 
+La corrección de las vistas `active_employees` y `coffee_members` está preparada en [202611020003_secure_directory_views.sql](supabase/migrations/202611020003_secure_directory_views.sql). Ambas pasan a `security_invoker=true` y lectura exclusiva del backend; el directorio general conserva su lectura autenticada con RLS. Para esta corrección, **despliega primero el código y después aplica la migración**, como indica [DATABASE_SECURITY.md](docs/DATABASE_SECURITY.md). No borra empleados ni registros. La [auditoría SQL de solo lectura](scripts/audit-database-security.sql) permite buscar más discrepancias de permisos en la instancia remota.
+
 Supabase Auth conserva y verifica las contraseñas; `profiles` nunca las contiene. El backend resuelve usernames a identidades técnicas sin exponer un directorio de correos. Los clientes SSR verifican `getClaims()` y consultan el perfil y la sesión vigentes en PostgreSQL. Las cookies son HttpOnly, SameSite=Lax y Secure en producción.
 
 Realtime obtiene un token de acceso de corta duración mediante una ruta autenticada sin caché y lo conserva en memoria, sin persistirlo en localStorage. El token de renovación y la clave administrativa permanecen en el servidor. Las lecturas HTTP comprueban la sesión y Postgres Changes utiliza los permisos de las tablas de origen.

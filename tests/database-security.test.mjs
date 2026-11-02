@@ -12,6 +12,8 @@ test("migraciones y permisos en PostgreSQL local", async (t) => {
   await db.exec(`
     create role anon; create role authenticated; create role service_role bypassrls;
     create schema auth; create schema storage;
+    -- Model Supabase projects that inherit broad public-schema relation grants.
+    alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
     create table auth.users (id uuid primary key, email text, phone text, encrypted_password text, raw_app_meta_data jsonb default '{}'::jsonb);
     create table auth.sessions (id uuid primary key, user_id uuid references auth.users(id) on delete cascade, created_at timestamptz default clock_timestamp(), not_after timestamptz);
     create function auth.jwt() returns jsonb language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claims',true),''),'{}')::jsonb $$;
@@ -34,6 +36,7 @@ test("migraciones y permisos en PostgreSQL local", async (t) => {
     "202610300004_flexible_username.sql",
     "202611020001_coffee.sql",
     "202611020002_live_updates.sql",
+    "202611020003_secure_directory_views.sql",
   ])
     await db.exec(
       await readFile(
@@ -719,21 +722,14 @@ test("migraciones y permisos en PostgreSQL local", async (t) => {
         [deliveryId, emp2, root],
       );
 
-      // Miembro activo puede leer entregas y miembros de café
+      // Miembro activo lee entregas; las vistas de miembros son solo de backend.
       await asUser(emp1, sid1, async () => {
         const deliveries = (await db.query("select * from public.coffee_deliveries")).rows;
         assert.equal(deliveries.length, 1);
         assert.equal(deliveries[0].note, "Café especial");
 
-        const members = (await db.query("select * from public.coffee_members")).rows;
-        assert.ok(members.length >= 2);
-        // El administrador 'root' no está en coffee_members
-        assert.ok(!members.some((m) => m.id === root));
-
-        const activeEmployees = (await db.query("select * from public.active_employees")).rows;
-        assert.ok(activeEmployees.length >= 2);
-        // El administrador 'root' no está en active_employees (para candidatos a votación)
-        assert.ok(!activeEmployees.some((m) => m.id === root));
+        await assert.rejects(db.query("select * from public.coffee_members"), /permission denied/);
+        await assert.rejects(db.query("select * from public.active_employees"), /permission denied/);
 
         // Inserción directa rechazada por falta de permisos en authenticated
         await assert.rejects(
@@ -744,6 +740,18 @@ test("migraciones y permisos en PostgreSQL local", async (t) => {
           /permission denied/,
         );
       });
+
+      // The trusted backend can read the same active employee fields without
+      // changing authenticated users' column permissions on profiles.
+      await db.exec("set role service_role");
+      try {
+        const members = (await db.query("select * from public.coffee_members")).rows;
+        assert.ok(members.length >= 2);
+        assert.ok(!members.some((m) => m.id === root));
+        const candidates = (await db.query("select * from public.active_employees")).rows;
+        assert.ok(candidates.length >= 2);
+        assert.ok(!candidates.some((m) => m.id === root));
+      } finally { await db.exec("reset role"); }
 
       // Anon no puede leer entregas ni miembros de café
       await db.exec("set role anon");
@@ -818,6 +826,81 @@ test("migraciones y permisos en PostgreSQL local", async (t) => {
       assert.equal(round.winner_id, null);
       assert.deepEqual(round.podium, []);
     });
+  });
+
+  await t.test("vistas: sin definer, sin escritura heredada y sin ampliar columnas privadas", async () => {
+    const views = await db.query("select relname, reloptions from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='v'");
+    assert.equal(views.rows.length, 3);
+    for (const view of views.rows) {
+      assert.ok(view.reloptions?.includes("security_invoker=true"), view.relname);
+      for (const role of ["anon", "authenticated"]) {
+        for (const privilege of ["INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES", "TRIGGER"]) {
+          const result = await db.query("select has_table_privilege($1,$2,$3) as allowed", [role, "public."+view.relname, privilege]);
+          assert.equal(result.rows[0].allowed, false, role+" "+privilege+" "+view.relname);
+        }
+      }
+    }
+    const member = await account("secure_view_user");
+    const memberSession = await session(member);
+    await asUser(member, memberSession, async () => {
+      assert.ok((await db.query("select * from public.employee_directory")).rows.length > 0);
+      for (const column of ["username", "role", "is_active", "created_at", "updated_at"]) {
+        await assert.rejects(db.query("select "+column+" from public.profiles"), /permission denied/);
+      }
+      await assert.rejects(db.query("select * from public.active_employees"), /permission denied/);
+      await assert.rejects(db.query("select * from public.coffee_members"), /permission denied/);
+    });
+    await db.query("delete from auth.sessions where id=$1", [memberSession]);
+    await asUser(member, memberSession, async () => {
+      assert.equal((await db.query("select * from public.employee_directory")).rows.length, 0);
+      await assert.rejects(db.query("select * from public.active_employees"), /permission denied/);
+      await assert.rejects(db.query("select * from public.coffee_members"), /permission denied/);
+    });
+    // A disabled employee is excluded even from the backend-only filtered views.
+    await db.query("update public.profiles set is_active=false where id=$1", [member]);
+    await db.exec("set role service_role");
+    try {
+      for (const view of ["active_employees", "coffee_members"]) {
+        const result = await db.query("select * from public."+view+" where id=$1", [member]);
+        assert.equal(result.rows.length, 0);
+      }
+    } finally { await db.exec("reset role"); }
+  });
+
+  await t.test("inventario: tablas public con RLS, wrappers invoker y search_path fijo", async () => {
+    const tables = await db.query("select c.relname from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind in ('r','p') and not c.relrowsecurity");
+    assert.deepEqual(tables.rows, []);
+    const definer = await db.query("select p.proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prosecdef");
+    assert.deepEqual(definer.rows, []);
+    const mutable = await db.query("select n.nspname,p.proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ('public','dircom_private') and p.prokind='f' and not exists(select 1 from unnest(p.proconfig) setting where setting like 'search_path=%')");
+    assert.deepEqual(mutable.rows, []);
+  });
+
+  await t.test("auditoria SQL de solo lectura: sin hallazgos en el esquema corregido", async () => {
+    const sql = await readFile(new URL("../scripts/audit-database-security.sql", import.meta.url), "utf8");
+    const result = await db.query(sql);
+    assert.deepEqual(result.rows, []);
+    // Prove that the audit also finds the original view flags and inherited
+    // grants, including column-only grants. Roll back this local simulation.
+    await db.transaction(async (tx) => {
+      await tx.exec(`
+        savepoint insecure_views;
+        alter view public.active_employees set (security_invoker=false);
+        alter view public.coffee_members set (security_invoker=false);
+        grant select, update on public.active_employees, public.coffee_members to authenticated;
+        grant update(first_name) on public.employee_directory to authenticated;
+        grant select(id) on public.coffee_members to anon;
+      `);
+      const findings = (await tx.query(sql)).rows;
+      for (const entity of ["public.active_employees", "public.coffee_members"]) {
+        assert.ok(findings.some((row) => row.check_name === "security_definer_view" && row.entity === entity));
+        assert.ok(findings.some((row) => row.check_name === "client_write_grant_on_view" && row.entity === entity));
+      }
+      assert.ok(findings.some((row) => row.check_name === "client_write_grant_on_view" && row.entity === "public.employee_directory"));
+      assert.ok(findings.some((row) => row.check_name === "anon_select_grant" && row.entity === "public.coffee_members"));
+      await tx.exec("rollback to savepoint insecure_views");
+    });
+    assert.deepEqual((await db.query(sql)).rows, []);
   });
 
 });
