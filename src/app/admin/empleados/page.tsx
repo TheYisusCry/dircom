@@ -13,14 +13,29 @@ export default async function EmployeesPage({
     ? Math.max(1, Math.min(100000, Number(query.page)))
     : 1;
   const size = 50;
-  const result = await createAdminClient()
-    .from("profiles")
-    .select("*", { count: "exact" })
-    .order("role")
-    .order("first_name")
-    .order("last_name")
-    .range((page - 1) * size, page * size - 1);
-  if (result.error) throw new Error("No se pudieron cargar los empleados.");
+  const adminClient = createAdminClient();
+
+  const [result, activeEmployeesResult] = await Promise.all([
+    adminClient
+      .from("profiles")
+      .select("*", { count: "exact" })
+      .eq("role", "employee")
+      .order("is_active", { ascending: false })
+      .order("last_name", { ascending: true })
+      .order("first_name", { ascending: true })
+      .range((page - 1) * size, page * size - 1),
+    adminClient
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("role", "employee")
+      .eq("is_active", true),
+  ]);
+
+  if (result.error || activeEmployeesResult.error) {
+    throw new Error("No se pudieron cargar los empleados.");
+  }
+
+  const activeCount = activeEmployeesResult.count ?? 0;
   const pages = Math.max(1, Math.ceil((result.count ?? 0) / size));
   return (
     <>
@@ -28,7 +43,7 @@ export default async function EmployeesPage({
       <p className="mb-7 mt-2 text-sm text-muted">
         Crea cuentas, configura cumpleaños y administra el acceso.
       </p>
-      <EmployeeManager employees={result.data ?? []} />
+      <EmployeeManager employees={result.data ?? []} activeCount={activeCount} />
       <nav
         aria-label="Paginación de empleados"
         className="mt-6 flex items-center justify-between text-xs text-muted"
@@ -44,7 +59,7 @@ export default async function EmployeesPage({
           <span />
         )}
         <span>
-          Página {page} de {pages} · {result.count ?? 0} cuentas
+          Página {page} de {pages} · {result.count ?? 0} empleados ({activeCount} activos)
         </span>
         {page < pages ? (
           <Link

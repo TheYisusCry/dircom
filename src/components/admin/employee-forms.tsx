@@ -36,6 +36,15 @@ export function EmployeeForm({
     employee ? updateEmployee : createEmployee,
     INITIAL_ACTION,
   );
+
+  useEffect(() => {
+    if (state.status === "success") {
+      const timer = setTimeout(() => {
+        onCancel?.();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [state.status, onCancel]);
   return (
     <form action={action} autoComplete="off" className="space-y-4 p-4 sm:space-y-5 sm:p-6">
       {employee && (
@@ -253,6 +262,15 @@ export function PasswordResetForm({
     resetEmployeePassword,
     INITIAL_ACTION,
   );
+
+  useEffect(() => {
+    if (state.status === "success") {
+      const timer = setTimeout(() => {
+        onCancel?.();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [state.status, onCancel]);
   return (
     <form action={action} autoComplete="off" className="space-y-4 p-4 sm:space-y-5 sm:p-6">
       <input type="hidden" name="id" value={employee.id} />
@@ -329,6 +347,15 @@ export function StatusForm({
     changeEmployeeStatus,
     INITIAL_ACTION,
   );
+
+  useEffect(() => {
+    if (state.status === "success") {
+      const timer = setTimeout(() => {
+        onCancel?.();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [state.status, onCancel]);
   return (
     <form action={action} autoComplete="off" className="space-y-4 p-4 sm:space-y-5 sm:p-6">
       <input type="hidden" name="id" value={employee.id} />

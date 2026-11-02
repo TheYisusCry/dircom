@@ -1,6 +1,5 @@
 "use client";
 import { useState } from "react";
-import Link from "next/link";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
@@ -13,53 +12,71 @@ type Selection =
   | { mode: "edit" | "password" | "status" | "block"; employee: Profile }
   | { mode: "create" }
   | null;
-export function EmployeeManager({ employees }: { employees: Profile[] }) {
+export function EmployeeManager({
+  employees,
+  activeCount,
+}: {
+  employees: Profile[];
+  activeCount?: number;
+}) {
   const [selection, setSelection] = useState<Selection>(null);
   const close = () => setSelection(null);
-  const actions = (employee: Profile) =>
-    employee.role === "admin" ? (
-      <div className="flex flex-wrap items-center gap-2">
-        <Link href="/admin/cuenta" className="admin-link">
-          Cambiar contraseña
-        </Link>
-        <span className="rounded-lg bg-mist px-3 py-2 text-[11px] text-muted">
-          Cuenta protegida
-        </span>
-      </div>
-    ) : (
-      <div className="flex flex-wrap gap-1.5">
+
+  const computedActiveCount =
+    activeCount ??
+    employees.filter((e) => e.role === "employee" && e.is_active).length;
+
+  const sortedEmployees = employees
+    .filter((e) => e.role === "employee")
+    .sort((a, b) => {
+      // 1. Activos primero, Despedidos (desactivados) abajo del todo
+      if (a.is_active !== b.is_active) {
+        return a.is_active ? -1 : 1;
+      }
+      // 2. Organizados alfabéticamente por el campo apellido
+      const cmpLast = (a.last_name || "").localeCompare(b.last_name || "", "es", {
+        sensitivity: "base",
+      });
+      if (cmpLast !== 0) return cmpLast;
+      // 3. Si coinciden en apellido, desempatar alfabéticamente por nombre
+      return (a.first_name || "").localeCompare(b.first_name || "", "es", {
+        sensitivity: "base",
+      });
+    });
+  const actions = (employee: Profile) => (
+    <div className="flex flex-wrap gap-1.5">
+      <button
+        type="button"
+        onClick={() => setSelection({ mode: "edit", employee })}
+        className="admin-link"
+      >
+        Editar
+      </button>
+      <button
+        type="button"
+        onClick={() => setSelection({ mode: "password", employee })}
+        className="admin-link"
+      >
+        Contraseña
+      </button>
+      <button
+        type="button"
+        onClick={() => setSelection({ mode: "status", employee })}
+        className="admin-link"
+      >
+        {employee.is_active ? "Despedir" : "Contratar"}
+      </button>
+      {!employee.is_active && (
         <button
           type="button"
-          onClick={() => setSelection({ mode: "edit", employee })}
+          onClick={() => setSelection({ mode: "block", employee })}
           className="admin-link"
         >
-          Editar
+          Reintentar bloqueo
         </button>
-        <button
-          type="button"
-          onClick={() => setSelection({ mode: "password", employee })}
-          className="admin-link"
-        >
-          Contraseña
-        </button>
-        <button
-          type="button"
-          onClick={() => setSelection({ mode: "status", employee })}
-          className="admin-link"
-        >
-          {employee.is_active ? "Despedir" : "Contratar"}
-        </button>
-        {!employee.is_active && (
-          <button
-            type="button"
-            onClick={() => setSelection({ mode: "block", employee })}
-            className="admin-link"
-          >
-            Reintentar bloqueo
-          </button>
-        )}
-      </div>
-    );
+      )}
+    </div>
+  );
   const person = (employee: Profile) => (
     <div className="flex items-center gap-3">
       <Avatar
@@ -74,8 +91,7 @@ export function EmployeeManager({ employees }: { employees: Profile[] }) {
           {employee.first_name} {employee.last_name}
         </p>
         <p className="mt-1 text-xs text-muted">
-          {employee.job_title ||
-            (employee.role === "admin" ? "Administrador" : "Sin cargo")}
+          {employee.job_title || "Sin cargo"}
         </p>
       </div>
     </div>
@@ -94,10 +110,16 @@ export function EmployeeManager({ employees }: { employees: Profile[] }) {
   return (
     <>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
-        <p className="flex items-center gap-2 text-sm text-muted">
-          <Users size={18} />
-          Cuentas privadas administradas por DIRCOM
-        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="flex items-center gap-2 text-sm text-muted">
+            <Users size={18} />
+            Cuentas privadas administradas por DIRCOM
+          </p>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-mint px-3 py-1 text-xs font-semibold text-forest-ink">
+            <span className="size-2 rounded-full bg-forest" />
+            {computedActiveCount} {computedActiveCount === 1 ? "empleado activo" : "empleados activos"}
+          </span>
+        </div>
         <Button onClick={() => setSelection({ mode: "create" })}>
           <Plus size={18} />
           Crear empleado
@@ -106,7 +128,7 @@ export function EmployeeManager({ employees }: { employees: Profile[] }) {
       <div className="panel hidden overflow-x-auto md:block">
         <table className="w-full text-left">
           <caption className="sr-only">
-            Cuentas de empleados y administrador
+            Cuentas de empleados
           </caption>
           <thead className="border-b border-line bg-mist text-xs text-muted">
             <tr>
@@ -124,7 +146,7 @@ export function EmployeeManager({ employees }: { employees: Profile[] }) {
             </tr>
           </thead>
           <tbody>
-            {employees.map((employee) => (
+            {sortedEmployees.map((employee) => (
               <tr
                 key={employee.id}
                 className="border-b border-line last:border-0"
@@ -144,7 +166,7 @@ export function EmployeeManager({ employees }: { employees: Profile[] }) {
         </table>
       </div>
       <div className="space-y-4 md:hidden">
-        {employees.map((employee) => (
+        {sortedEmployees.map((employee) => (
           <article key={employee.id} className="panel space-y-4 p-5">
             {person(employee)}
             <div className="flex flex-wrap items-center gap-3 text-xs">
@@ -158,7 +180,7 @@ export function EmployeeManager({ employees }: { employees: Profile[] }) {
           </article>
         ))}
       </div>
-      {!employees.length && (
+      {!sortedEmployees.length && (
         <div className="panel p-8 text-center text-sm text-muted">
           Todavía no hay empleados en esta página.
         </div>
