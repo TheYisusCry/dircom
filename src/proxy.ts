@@ -43,5 +43,6 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg|images/).*)"],
+  // Vercel serves its own analytics endpoints; they do not require a DIRCOM session.
+  matcher: ["/((?!_next/static|_next/image|_vercel/|favicon.ico|icon.svg|images/).*)"],
 };

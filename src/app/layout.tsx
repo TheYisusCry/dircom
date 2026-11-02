@@ -1,4 +1,5 @@
 import { LiveProvider } from "@/components/live/live-provider";
+import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
@@ -37,6 +38,7 @@ export default function RootLayout({
           Saltar al contenido
         </a>
         <LiveProvider>{children}</LiveProvider>
+        <Analytics />
       </body>
     </html>
   );
