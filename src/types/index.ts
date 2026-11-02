@@ -53,4 +53,5 @@ export interface Activity {
   createdAt: string;
   description: string;
   messages: readonly ActivityMessage[];
+  messageCount?: number;
 }

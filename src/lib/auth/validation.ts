@@ -69,9 +69,9 @@ export function validateProfileFields(
 export function avatarUrl(profile: {
   id: string;
   avatar_path: string | null;
-  updated_at: string;
+  updated_at?: string;
 }) {
   return profile.avatar_path
-    ? `/api/avatars/${profile.id}?v=${encodeURIComponent(profile.updated_at)}`
+    ? `/api/avatars/${profile.id}${profile.updated_at ? `?v=${encodeURIComponent(profile.updated_at)}` : ""}`
     : undefined;
 }

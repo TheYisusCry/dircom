@@ -48,6 +48,7 @@ export type VotingRoundRow = {
   closes_at: string;
   created_at: string;
   winner_id: string | null;
+  reveal_at: string | null;
   podium: Array<{
     position: 1 | 2 | 3;
     employee_id: string;
@@ -80,6 +81,15 @@ export type ActivityRow = {
   status: ActivityStatus;
   created_at: string;
   closed_at: string | null;
+};
+export type CoffeeDeliveryRow = {
+  id: string;
+  employee_id: string;
+  quantity: number;
+  delivery_date: string;
+  note: string | null;
+  registered_by: string;
+  created_at: string;
 };
 export type ActivityMessageRow = {
   id: string;
@@ -128,7 +138,7 @@ export type Database = {
       };
       voting_rounds: {
         Row: VotingRoundRow;
-        Insert: Omit<VotingRoundRow, "id" | "created_at" | "opens_at" | "winner_id" | "podium"> &
+        Insert: Omit<VotingRoundRow, "id" | "created_at" | "opens_at" | "winner_id" | "podium" | "reveal_at"> &
           Partial<Pick<VotingRoundRow, "id" | "created_at" | "opens_at" | "winner_id" | "podium">>;
         Update: Partial<VotingRoundRow>;
         Relationships: [
@@ -186,9 +196,47 @@ export type Database = {
           },
         ];
       };
+      coffee_deliveries: {
+        Row: CoffeeDeliveryRow;
+        Insert: Omit<CoffeeDeliveryRow, "id" | "created_at"> &
+          Partial<Pick<CoffeeDeliveryRow, "id" | "created_at">>;
+        Update: Partial<CoffeeDeliveryRow>;
+        Relationships: [
+          {
+            foreignKeyName: "coffee_deliveries_employee_id_fkey";
+            columns: ["employee_id"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "coffee_deliveries_registered_by_fkey";
+            columns: ["registered_by"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
-    Views: { employee_directory: { Row: DirectoryProfile; Relationships: [] } };
+    Views: {
+      employee_directory: { Row: DirectoryProfile; Relationships: [] };
+      active_employees: {
+        Row: Pick<
+          Profile,
+          "id" | "first_name" | "last_name" | "job_title" | "avatar_path" | "created_at"
+        >;
+        Relationships: [];
+      };
+      coffee_members: {
+        Row: Pick<
+          Profile,
+          "id" | "first_name" | "last_name" | "job_title" | "avatar_path" | "created_at"
+        >;
+        Relationships: [];
+      };
+    };
     Functions: {
+      dircom_publish_voting_results: { Args: { p_round_id: string }; Returns: string };
+      dircom_close_voting_round: { Args: { p_round_id: string }; Returns: boolean };
       dircom_my_profile: { Args: Empty; Returns: Profile[] };
       dircom_resolve_username: {
         Args: { p_username: string };

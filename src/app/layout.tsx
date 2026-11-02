@@ -1,3 +1,4 @@
+import { LiveProvider } from "@/components/live/live-provider";
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
@@ -35,7 +36,7 @@ export default function RootLayout({
         <a href="#contenido" className="skip-link">
           Saltar al contenido
         </a>
-        {children}
+        <LiveProvider>{children}</LiveProvider>
       </body>
     </html>
   );

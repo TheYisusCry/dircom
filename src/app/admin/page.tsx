@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Users, LockKeyhole, PartyPopper, Vote } from "@/components/ui/icon";
+import { Users, LockKeyhole, PartyPopper, Vote, Coffee } from "@/components/ui/icon";
+
 export default async function AdminPage() {
   await requireAdmin();
   const admin = createAdminClient();
@@ -18,9 +19,17 @@ export default async function AdminPage() {
     admin
       .from("birthday_celebrations")
       .select("id", { count: "exact", head: true }),
+    admin
+      .from("coffee_deliveries")
+      .select("quantity"),
   ]);
+
   if (counts.some((item) => item.error))
     throw new Error("No se pudo cargar la administración.");
+
+  const totalCoffeePackages =
+    counts[3].data?.reduce((sum, d) => sum + (d.quantity ?? 1), 0) ?? 0;
+
   return (
     <>
       <h1 className="text-3xl font-extrabold tracking-tight">
@@ -29,7 +38,9 @@ export default async function AdminPage() {
       <p className="mt-2 text-sm text-muted">
         Gestiona las cuentas privadas y los datos de tu equipo.
       </p>
-      <div className="mt-7 grid gap-5 sm:grid-cols-3">
+
+      {/* KPI Cards */}
+      <div className="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <div className="panel p-6">
           <Users size={25} className="text-forest" />
           <p className="mt-4 text-3xl font-bold">{counts[0].count ?? 0}</p>
@@ -49,8 +60,17 @@ export default async function AdminPage() {
             Celebraciones programadas
           </p>
         </div>
+        <div className="panel p-6">
+          <Coffee size={25} className="text-forest" />
+          <p className="mt-4 text-3xl font-bold">{totalCoffeePackages}</p>
+          <p className="mt-2 text-sm text-muted">
+            Paquetes de café aportados
+          </p>
+        </div>
       </div>
-      <div className="mt-8 grid gap-5 sm:grid-cols-3">
+
+      {/* Navigation Quick Links */}
+      <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <Link
           href="/admin/empleados"
           className="flex min-h-16 items-center justify-center gap-3 rounded-2xl bg-forest px-6 py-4 text-center text-base font-bold text-on-forest shadow-xs transition-all hover:bg-forest-light hover:shadow-md"
@@ -71,6 +91,13 @@ export default async function AdminPage() {
         >
           <Vote size={22} aria-hidden="true" />
           <span>Votaciones de la semana</span>
+        </Link>
+        <Link
+          href="/admin/cafe"
+          className="flex min-h-16 items-center justify-center gap-3 rounded-2xl border border-line bg-white px-6 py-4 text-center text-base font-bold text-ink shadow-xs transition-all hover:border-forest/40 hover:bg-mist hover:text-forest-ink hover:shadow-md"
+        >
+          <Coffee size={22} aria-hidden="true" />
+          <span>Control de café</span>
         </Link>
       </div>
     </>

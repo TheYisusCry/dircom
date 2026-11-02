@@ -121,6 +121,42 @@ export function getNextBirthday(
   return { ...next, celebration };
 }
 
+/** Returns the upcoming birthdays in chronological order up to the specified limit. */
+export function getUpcomingBirthdays(
+  employees: readonly Employee[],
+  celebrations: readonly BirthdayCelebration[],
+  referenceDate: string,
+  limit = 3,
+): BirthdayPresentation[] {
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(referenceDate) ||
+    !Number.isFinite(Date.parse(`${referenceDate}T12:00:00Z`)) ||
+    new Date(`${referenceDate}T12:00:00Z`).toISOString().slice(0, 10) !==
+      referenceDate
+  ) {
+    throw new RangeError("Fecha de referencia inválida");
+  }
+  const occurrences = employees
+    .map((employee) => ({
+      employee,
+      nextBirthday: nextOccurrence(employee, referenceDate),
+    }))
+    .sort((a, b) => a.nextBirthday.localeCompare(b.nextBirthday))
+    .slice(0, limit);
+
+  return occurrences.map((item) => {
+    const celebration = celebrations.find(
+      (event) =>
+        event.employeeId === item.employee.id &&
+        new Intl.DateTimeFormat("en", {
+          year: "numeric",
+          timeZone: OFFICE_TIME_ZONE,
+        }).format(new Date(event.startsAt)) === item.nextBirthday.slice(0, 4),
+    );
+    return { ...item, celebration };
+  });
+}
+
 /** Resolves current date and month in the official office timezone (Bolivia). */
 export function getOfficeCurrentDate(): {
   todayIso: string;

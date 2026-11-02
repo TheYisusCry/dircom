@@ -1,0 +1,240 @@
+import "server-only";
+import { createSessionClient } from "@/lib/supabase/server";
+import { calculateEmployeeCoffeeStatus, buildCoffeeLeaderboard, calculateCoffeeOfficeSummary } from "@/lib/coffee";
+import { celebrationRowToCelebration, getUpcomingBirthdays, getNextBirthday, getOfficeCurrentDate, profileToEmployee, profileToParticipant } from "@/lib/dates";
+import type { CoffeeDeliveryRow } from "@/types/coffee";
+import type { Activity, Employee, PodiumPlace, WeeklyRecognition } from "@/types";
+import type { Profile, VotingRoundRow } from "@/types/database";
+export type DashboardScope = "birthdays" | "voting" | "activities" | "coffee";
+type RawProfile = {
+  id?: string;
+  first_name?: string;
+  last_name?: string;
+  job_title?: string | null;
+  avatar_path?: string | null;
+};
+
+type RawActivity = {
+  id: string;
+  title: string;
+  category: "food" | "coffee" | "social";
+  description: string;
+  status: "open" | "closed";
+  created_at: string;
+  creator?: RawProfile | RawProfile[] | null;
+  message_count?: Array<{ count: number }>;
+  messages?: Array<{
+    id: string;
+    text: string;
+    created_at: string;
+    author?: RawProfile | RawProfile[] | null;
+  }> | null;
+};
+
+
+export async function loadDashboard(profile: Profile, scope?: DashboardScope) {
+  async function run<T>(section: DashboardScope, query: () => PromiseLike<T>): Promise<T | { data: null; error: null }> {
+    return !scope || section === scope ? await query() : { data: null, error: null };
+  }
+  const supabase = await createSessionClient();
+
+  const [
+    profilesRes,
+    celebrationsRes,
+    activeRoundRes,
+    publishedRoundRes,
+    candidatesRes,
+    activitiesRes,
+    coffeeMembersRes,
+    coffeeDeliveriesRes,
+  ] = await Promise.all([
+    run("birthdays", () => supabase
+      .from("employee_directory")
+      .select("*")
+      .not("birthday_day", "is", null)
+      .not("birthday_month", "is", null)),
+    run("birthdays", () => supabase.from("birthday_celebrations").select("*")),
+    run("voting", () => supabase
+      .from("voting_rounds")
+      .select("*")
+      .in("status", ["open", "closed"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()),
+    run("voting", () => supabase
+      .from("voting_rounds")
+      .select("*")
+      .eq("status", "published")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()),
+    run("voting", () => supabase
+      .from("active_employees")
+      .select("id, first_name, last_name, job_title, avatar_path")
+      .neq("id", profile.id)
+      .order("first_name")),
+    run("activities", () => supabase
+      .from("activities")
+      .select(`
+        id,
+        title,
+        category,
+        description,
+        status,
+        created_at,
+        creator:profiles!activities_creator_id_fkey(id, first_name, last_name, job_title, avatar_path),
+        message_count:activity_messages(count),
+        messages:activity_messages(
+          id,
+          text,
+          created_at,
+          author:profiles!activity_messages_author_id_fkey(id, first_name, last_name, job_title, avatar_path)
+        )
+      `)
+      .order("created_at", { ascending: false })
+      .order("created_at", { referencedTable: "messages", ascending: false })
+      .order("id", { referencedTable: "messages", ascending: false })
+      .limit(3, { referencedTable: "messages" })),
+    run("coffee", () => supabase.from("coffee_members").select("*").order("first_name")),
+    run("coffee", () => supabase
+      .from("coffee_deliveries")
+      .select("*")
+      .order("delivery_date", { ascending: false })),
+  ]);
+
+  for (const result of [profilesRes, celebrationsRes, activeRoundRes, publishedRoundRes, candidatesRes, activitiesRes, coffeeMembersRes, coffeeDeliveriesRes]) {
+    if (result.error) throw new Error("No se pudieron actualizar los datos del tablero.");
+  }
+
+  const dbEmployees = (profilesRes.data ?? [])
+    .map(profileToEmployee)
+    .filter((e): e is Employee => e !== null);
+
+  const dbCelebrations = (celebrationsRes.data ?? []).map(
+    celebrationRowToCelebration,
+  );
+
+  const { todayIso, currentMonth, currentYear } = getOfficeCurrentDate();
+  const birthday = getNextBirthday(dbEmployees, dbCelebrations, todayIso);
+  const upcomingBirthdays = getUpcomingBirthdays(dbEmployees, dbCelebrations, todayIso, 3);
+
+  // Voting state and recognition
+  const activeRound = activeRoundRes.data as VotingRoundRow | null;
+  const publishedRound = publishedRoundRes.data as VotingRoundRow | null;
+
+  let hasVoted = false;
+  if (activeRound && profile.role === "employee") {
+    const ballotCheck = await supabase
+      .from("voting_ballots_cast")
+      .select("voter_id")
+      .eq("round_id", activeRound.id)
+      .maybeSingle();
+    if (ballotCheck.error) throw new Error("No se pudo consultar tu voto.");
+    hasVoted = Boolean(ballotCheck.data);
+  }
+
+  const candidates = (candidatesRes.data ?? []).map((c) => ({
+    id: c.id,
+    name: `${c.first_name} ${c.last_name}`,
+    role: c.job_title ?? "Equipo DIRCOM",
+    photo: c.avatar_path ? `/api/avatars/${c.id}` : undefined,
+  }));
+
+  // Build podium & recognition from published round if available
+  let activeRecognition: WeeklyRecognition | null = null;
+  if (
+    publishedRound &&
+    Array.isArray(publishedRound.podium) &&
+    publishedRound.podium.length > 0
+  ) {
+    const realPodium: PodiumPlace[] = publishedRound.podium.map((p) => ({
+      position: p.position,
+      employee: {
+        id: p.employee_id,
+        name: p.employee_name,
+        role: p.employee_role,
+        photo: p.employee_photo,
+        birthday: { day: 1, month: 1 },
+      },
+      recognition: p.recognition,
+    }));
+
+    if (realPodium.length > 0) {
+      activeRecognition = {
+        weekLabel: publishedRound.week_label,
+        winner: realPodium[0]?.employee ?? {
+          id: "winner",
+          name: "Empleado Destacado",
+          role: "Equipo DIRCOM",
+          birthday: { day: 1, month: 1 },
+        },
+        message:
+          "Por su compromiso diario, compañerismo y dedicación. ¡Gracias por hacer que DIRCOM llegue más lejos!",
+        podium: realPodium,
+      };
+    }
+  }
+
+  const rawActivities =
+    (activitiesRes.data as unknown as RawActivity[] | null) ?? [];
+
+  const realActivities: Activity[] = rawActivities.map((row) => {
+    const rawCreator = Array.isArray(row.creator)
+      ? row.creator[0]
+      : row.creator;
+    const rawMessages = Array.isArray(row.messages) ? row.messages : [];
+    return {
+      id: row.id,
+      title: row.title,
+      category: (["food", "coffee", "social"].includes(row.category)
+        ? row.category
+        : "food") as "food" | "coffee" | "social",
+      description: row.description,
+      status: row.status as "open" | "closed",
+      createdAt: row.created_at,
+      creator: profileToParticipant(rawCreator),
+      messageCount: row.message_count?.[0]?.count ?? rawMessages.length,
+      messages: rawMessages
+        .map((m) => {
+          const rawAuthor = Array.isArray(m.author)
+            ? m.author[0]
+            : m.author;
+          return {
+            id: m.id,
+            text: m.text,
+            sentAt: m.created_at,
+            author: profileToParticipant(rawAuthor),
+          };
+        })
+        .sort(
+          (a, b) =>
+            new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime(),
+        ),
+    };
+  });
+
+  const rawCoffeeMembers = (coffeeMembersRes.data ?? []) as Array<{
+    id: string;
+    first_name: string;
+    last_name: string;
+    job_title: string | null;
+    avatar_path: string | null;
+    created_at: string;
+  }>;
+  const rawCoffeeDeliveries = (coffeeDeliveriesRes.data ?? []) as CoffeeDeliveryRow[];
+
+  const coffeeStatuses = rawCoffeeMembers.map((emp) =>
+    calculateEmployeeCoffeeStatus(emp, rawCoffeeDeliveries, currentYear, currentMonth),
+  );
+  const coffeeLeaderboard = buildCoffeeLeaderboard(coffeeStatuses, rawCoffeeDeliveries);
+  const coffeeSummary = calculateCoffeeOfficeSummary(coffeeStatuses, currentYear, currentMonth);
+
+
+  return {
+    birthdays: { birthday, upcomingBirthdays, todayIso },
+    voting: { activeRound, publishedRound, hasVoted, candidates, activeRecognition, serverNow: Date.now() },
+    activities: { realActivities },
+    coffee: { coffeeStatuses, coffeeLeaderboard, coffeeSummary },
+  };
+}
+export type DashboardData = Awaited<ReturnType<typeof loadDashboard>>;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { announceChange } from "@/components/live/live-provider";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
@@ -27,7 +27,6 @@ export function VotingBallotModal({
   open: boolean;
   onClose: () => void;
 }) {
-  const router = useRouter();
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
   const [state, formAction, pending] = useActionState(castVoteAction, INITIAL_ACTION);
 
@@ -35,11 +34,11 @@ export function VotingBallotModal({
     if (state.status === "success") {
       const timer = setTimeout(() => {
         onClose();
-        router.refresh();
+        announceChange({ scope: "voting" });
       }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [state.status, onClose, router]);
+  }, [state, onClose]);
 
   const selectedCandidate = candidates.find((c) => c.id === selectedCandidateId);
 
@@ -48,15 +47,16 @@ export function VotingBallotModal({
       open={open}
       onClose={onClose}
       title="¿Quién hizo la diferencia esta semana?"
+      maxWidth="max-w-lg"
     >
-      <form action={formAction} className="space-y-4 p-4 sm:space-y-5 sm:p-6">
+      <form action={formAction} className="space-y-4 p-4 sm:space-y-4 sm:p-5">
         <input type="hidden" name="round_id" value={round.id} />
         <input type="hidden" name="candidate_id" value={selectedCandidateId ?? ""} />
 
         {state.message && (
           <p
             role={state.status === "error" ? "alert" : "status"}
-            className={`rounded-xl border p-4 text-sm leading-6 ${
+            className={`rounded-xl border p-3.5 text-sm leading-6 ${
               state.status === "error"
                 ? "border-red-200 bg-red-50 text-red-800"
                 : "border-forest/20 bg-mint text-forest-ink"
@@ -81,7 +81,7 @@ export function VotingBallotModal({
             No hay candidatos disponibles para votar.
           </p>
         ) : (
-          <div className="max-h-[360px] space-y-2 overflow-y-auto pr-1">
+          <div className="max-h-[216px] space-y-2 overflow-y-auto pr-2">
             {candidates.map((cand) => {
               const isSelected = selectedCandidateId === cand.id;
               return (
@@ -90,16 +90,16 @@ export function VotingBallotModal({
                   type="button"
                   onClick={() => setSelectedCandidateId(cand.id)}
                   disabled={pending}
-                  className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all ${
+                  className={`flex w-full items-center gap-3 rounded-xl border p-2.5 sm:p-3 text-left transition-all ${
                     isSelected
                       ? "border-forest bg-mint/50 ring-2 ring-forest/30"
                       : "border-line bg-white hover:border-forest/40 hover:bg-mist/50"
                   }`}
                 >
-                  <Avatar employee={{ name: cand.name, photo: cand.photo }} size={42} />
+                  <Avatar employee={{ name: cand.name, photo: cand.photo }} size={38} />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold text-ink">{cand.name}</p>
-                    <p className="text-xs text-muted">{cand.role}</p>
+                    <p className="truncate text-sm font-bold text-ink">{cand.name}</p>
+                    <p className="truncate text-xs text-muted">{cand.role}</p>
                   </div>
                   <div
                     className={`flex size-5 shrink-0 items-center justify-center rounded-full border ${

@@ -32,6 +32,7 @@ test("migraciones y permisos en PostgreSQL local", async (t) => {
     "202610300002_voting.sql",
     "202610300003_activities.sql",
     "202610300004_flexible_username.sql",
+    "202611020001_coffee.sql",
   ])
     await db.exec(
       await readFile(
@@ -701,6 +702,66 @@ test("migraciones y permisos en PostgreSQL local", async (t) => {
           /permission denied/,
         );
       });
+    },
+  );
+
+  await t.test(
+    "registro de cafe: lectura para miembros activos y escritura protegida",
+    async () => {
+      const emp1 = await account("coffee_user1");
+      const sid1 = await session(emp1);
+      const emp2 = await account("coffee_user2");
+      const deliveryId = randomUUID();
+
+      await db.query(
+        "insert into public.coffee_deliveries(id, employee_id, quantity, delivery_date, note, registered_by) values($1, $2, 1, '2026-11-02', 'Café especial', $3)",
+        [deliveryId, emp2, root],
+      );
+
+      // Miembro activo puede leer entregas y miembros de café
+      await asUser(emp1, sid1, async () => {
+        const deliveries = (await db.query("select * from public.coffee_deliveries")).rows;
+        assert.equal(deliveries.length, 1);
+        assert.equal(deliveries[0].note, "Café especial");
+
+        const members = (await db.query("select * from public.coffee_members")).rows;
+        assert.ok(members.length >= 2);
+        // El administrador 'root' no está en coffee_members
+        assert.ok(!members.some((m) => m.id === root));
+
+        const activeEmployees = (await db.query("select * from public.active_employees")).rows;
+        assert.ok(activeEmployees.length >= 2);
+        // El administrador 'root' no está en active_employees (para candidatos a votación)
+        assert.ok(!activeEmployees.some((m) => m.id === root));
+
+        // Inserción directa rechazada por falta de permisos en authenticated
+        await assert.rejects(
+          db.query(
+            "insert into public.coffee_deliveries(employee_id, quantity, registered_by) values($1, 1, $2)",
+            [emp1, emp1],
+          ),
+          /permission denied/,
+        );
+      });
+
+      // Anon no puede leer entregas ni miembros de café
+      await db.exec("set role anon");
+      try {
+        await assert.rejects(
+          db.query("select * from public.coffee_deliveries"),
+          /permission denied/,
+        );
+        await assert.rejects(
+          db.query("select * from public.coffee_members"),
+          /permission denied/,
+        );
+        await assert.rejects(
+          db.query("select * from public.active_employees"),
+          /permission denied/,
+        );
+      } finally {
+        await db.exec("reset role");
+      }
     },
   );
 });

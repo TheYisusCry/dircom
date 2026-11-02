@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { announceChange } from "@/components/live/live-provider";
+import { ActivityThread } from "./activity-thread";
 import {
   ArrowRight,
   IllustratedIcon,
@@ -36,7 +37,6 @@ export function ActivityCard({
   currentUserId?: string;
   isAdmin?: boolean;
 }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -56,19 +56,19 @@ export function ActivityCard({
   useEffect(() => {
     if (msgState.status === "success") {
       formRef.current?.reset();
-      router.refresh();
+      announceChange({ scope: "activities", activityId: activity.id });
     }
-  }, [msgState.status, router]);
+  }, [msgState, activity.id]);
 
   useEffect(() => {
     if (closeState.status === "success" || delState.status === "success") {
-      router.refresh();
+      announceChange({ scope: "activities", activityId: activity.id });
       if (delState.status === "success") {
         const timer = setTimeout(() => setOpen(false), 200);
         return () => clearTimeout(timer);
       }
     }
-  }, [closeState.status, delState.status, router]);
+  }, [closeState, delState, activity.id]);
 
   const canManage = Boolean(isAdmin || (currentUserId && activity.creator.id === currentUserId));
 
@@ -114,9 +114,9 @@ export function ActivityCard({
         <div className="mt-6 flex items-center justify-between border-t border-line pt-4">
           <span className="flex items-center gap-1.5 text-[10px] text-muted">
             <MessageCircle size={13} aria-hidden="true" />
-            {activity.messages.length === 1
+            {(activity.messageCount ?? activity.messages.length) === 1
               ? "1 mensaje"
-              : `${activity.messages.length} mensajes`}
+              : `${(activity.messageCount ?? activity.messages.length)} mensajes`}
           </span>
           <button
             type="button"
@@ -142,18 +142,7 @@ export function ActivityCard({
               </span>
             </div>
 
-            <div>
-              <h4 className="mb-3 text-xs font-bold tracking-tight uppercase text-muted">
-                Pedidos y notas anotadas ({activity.messages.length})
-              </h4>
-              {activity.messages.length === 0 ? (
-                <p className="rounded-xl bg-mist/60 p-4 text-center text-xs text-muted">
-                  Aún nadie ha anotado pedidos en esta actividad. ¡Sé el primero!
-                </p>
-              ) : (
-                <ActivityMessages messages={activity.messages} showTime />
-              )}
-            </div>
+            <ActivityThread activityId={activity.id} />
 
             {/* Formulario para enviar mensaje */}
             {activity.status === "open" ? (

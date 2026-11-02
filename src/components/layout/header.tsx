@@ -1,9 +1,8 @@
 import Link from "next/link";
 import type { Profile } from "@/types/database";
 import { avatarUrl } from "@/lib/auth/validation";
-import { logoutAction } from "@/app/login/actions";
-import { ArrowRight } from "@/components/ui/icon";
 import { Avatar } from "@/components/ui/avatar";
+import { LogoutButton } from "@/components/auth/logout-button";
 import { Navigation } from "./navigation";
 
 export function Header({ profile }: { profile: Profile }) {
@@ -69,17 +68,7 @@ export function Header({ profile }: { profile: Profile }) {
               Mi perfil
             </Link>
           )}
-          <form action={logoutAction}>
-            <button
-              type="submit"
-              aria-label="Cerrar sesión"
-              title="Cerrar sesión"
-              className="flex min-h-11 items-center gap-2 rounded-lg px-2 text-xs font-semibold text-forest-ink hover:bg-mint"
-            >
-              <ArrowRight size={18} />
-              <span className="hidden xl:inline">Salir</span>
-            </button>
-          </form>
+          <LogoutButton />
         </div>
       </div>
     </header>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { announceChange } from "@/components/live/live-provider";
 import { Coffee, IllustratedIcon, Plus, Utensils } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
@@ -9,7 +9,6 @@ import { createActivityAction } from "@/app/actions/activities";
 import { INITIAL_ACTION, type ActivityCategory } from "@/types/database";
 
 export function NewActivityPreview() {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState<ActivityCategory>("food");
   const [state, formAction, pending] = useActionState(createActivityAction, INITIAL_ACTION);
@@ -18,11 +17,11 @@ export function NewActivityPreview() {
     if (state.status === "success") {
       const timer = setTimeout(() => {
         setOpen(false);
-        router.refresh();
+        announceChange({ scope: "activities" });
       }, 700);
       return () => clearTimeout(timer);
     }
-  }, [state.status, router]);
+  }, [state]);
 
   return (
     <>

@@ -10,12 +10,14 @@ export function Modal({
   title,
   children,
   closeOnClickOutside = true,
+  maxWidth = "max-w-xl",
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: ReactNode;
   closeOnClickOutside?: boolean;
+  maxWidth?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -54,7 +56,7 @@ export function Modal({
         )
           onClose();
       }}
-      className="m-auto max-h-[90dvh] w-[calc(100%-1.5rem)] max-w-xl overflow-y-auto overscroll-contain rounded-2xl border border-line bg-white p-0 text-ink shadow-xl backdrop:bg-ink/55 sm:w-[calc(100%-2rem)]"
+      className={`m-auto max-h-[90dvh] w-[calc(100%-1.5rem)] ${maxWidth} overflow-y-auto overscroll-contain rounded-2xl border border-line bg-white p-0 text-ink shadow-xl backdrop:bg-ink/55 sm:w-[calc(100%-2rem)]`}
     >
       {open && (
         <motion.div

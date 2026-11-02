@@ -8,6 +8,7 @@ import {
   Vote,
   LockKeyhole,
   LayoutDashboard,
+  Coffee,
 } from "@/components/ui/icon";
 
 const items = [
@@ -15,6 +16,7 @@ const items = [
   { href: "/admin/empleados", label: "Empleados", icon: Users },
   { href: "/admin/cumpleanos", label: "Cumpleaños", icon: PartyPopper },
   { href: "/admin/votaciones", label: "Votaciones", icon: Vote },
+  { href: "/admin/cafe", label: "Café", icon: Coffee },
   { href: "/admin/cuenta", label: "Mi cuenta", icon: LockKeyhole },
 ];
 

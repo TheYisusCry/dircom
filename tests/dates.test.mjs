@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   getNextBirthday,
+  getUpcomingBirthdays,
   formatCalendarDate,
   formatEventDate,
   formatTime,
@@ -37,6 +38,23 @@ test("elige un solo cumpleaños próximo, independientemente del orden de origen
   );
   assert.equal(result.employee.id, "Mía");
   assert.equal(result.nextBirthday, "2026-10-18");
+});
+
+test("getUpcomingBirthdays devuelve los próximos 3 cumpleaños en orden cronológico", () => {
+  const emps = [
+    employee("Carlos", 10, 12),
+    employee("Mía", 18, 10),
+    employee("Ana", 5, 1),
+    employee("Pedro", 24, 11),
+  ];
+  const list = getUpcomingBirthdays(emps, [], "2026-10-13", 3);
+  assert.equal(list.length, 3);
+  assert.equal(list[0].employee.id, "Mía");
+  assert.equal(list[0].nextBirthday, "2026-10-18");
+  assert.equal(list[1].employee.id, "Pedro");
+  assert.equal(list[1].nextBirthday, "2026-11-24");
+  assert.equal(list[2].employee.id, "Carlos");
+  assert.equal(list[2].nextBirthday, "2026-12-10");
 });
 
 test("incluye un cumpleaños de hoy y mantiene el orden en un empate", () => {

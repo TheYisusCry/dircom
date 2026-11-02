@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth/session";
+import { createSessionClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { UUID_PATTERN } from "@/lib/auth/validation";
 import type { ActionState } from "@/types/database";
@@ -73,14 +74,8 @@ export async function closeVotingRound(
     const roundId = String(form.get("round_id") ?? "").trim();
     if (!UUID_PATTERN.test(roundId)) return fail("Ronda inválida.");
 
-    const admin = createAdminClient();
-    const result = await admin
-      .from("voting_rounds")
-      .update({
-        status: "closed",
-        closes_at: new Date().toISOString(),
-      })
-      .eq("id", roundId);
+    const client = await createSessionClient();
+    const result = await client.rpc("dircom_close_voting_round", { p_round_id: roundId });
 
     if (result.error) throw result.error;
 
@@ -102,86 +97,13 @@ export async function publishVotingResults(
     const roundId = String(form.get("round_id") ?? "").trim();
     if (!UUID_PATTERN.test(roundId)) return fail("Ronda inválida.");
 
-    const admin = createAdminClient();
-
-    // 1. Fetch raw votes for this round
-    const votesRes = await admin
-      .from("voting_votes")
-      .select("candidate_id")
-      .eq("round_id", roundId);
-
-    if (votesRes.error) throw votesRes.error;
-
-    const votes = votesRes.data ?? [];
-
-    // Tally votes
-    const counts = new Map<string, number>();
-    for (const v of votes) {
-      counts.set(v.candidate_id, (counts.get(v.candidate_id) ?? 0) + 1);
-    }
-
-    // Sort candidates by vote count descending
-    const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
-
-    // 2. Fetch profiles of top candidates (up to 3)
-    const topIds = sorted.slice(0, 3).map(([id]) => id);
-
-    const candidatesMap = new Map<string, { id: string; name: string; role: string; photo?: string }>();
-    if (topIds.length > 0) {
-      const profsRes = await admin
-        .from("profiles")
-        .select("id, first_name, last_name, job_title, avatar_path")
-        .in("id", topIds);
-
-      if (profsRes.data) {
-        for (const p of profsRes.data) {
-          candidatesMap.set(p.id, {
-            id: p.id,
-            name: `${p.first_name} ${p.last_name}`,
-            role: p.job_title ?? "Equipo DIRCOM",
-            photo: p.avatar_path ? `/api/avatars/${p.id}` : undefined,
-          });
-        }
-      }
-    }
-
-    const defaultRecognitions = [
-      "Espíritu de equipo",
-      "Creatividad que inspira",
-      "Siempre dispuesto a ayudar",
-    ];
-
-    const podium = sorted.slice(0, 3).map(([candidateId, voteCount], index) => {
-      const profile = candidatesMap.get(candidateId);
-      const position = (index + 1) as 1 | 2 | 3;
-      return {
-        position,
-        employee_id: candidateId,
-        employee_name: profile?.name ?? "Empleado",
-        employee_role: profile?.role ?? "Equipo DIRCOM",
-        employee_photo: profile?.photo,
-        votes: voteCount,
-        recognition: defaultRecognitions[index] ?? "Gran compromiso",
-      };
-    });
-
-    const winnerId = podium[0]?.employee_id ?? null;
-
-    // 3. Update round with results and status 'published'
-    const updateRes = await admin
-      .from("voting_rounds")
-      .update({
-        status: "published",
-        winner_id: winnerId,
-        podium,
-      })
-      .eq("id", roundId);
-
-    if (updateRes.error) throw updateRes.error;
+    const client = await createSessionClient();
+    const result = await client.rpc("dircom_publish_voting_results", { p_round_id: roundId });
+    if (result.error) throw result.error;
 
     revalidatePath("/");
     revalidatePath("/admin/votaciones");
-    return ok("¡Resultados publicados! Todos los usuarios pueden ver el podio ganador en el tablero principal.");
+    return ok("Revelación programada. El equipo verá el podio al terminar la cuenta regresiva de 10 segundos.");
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Error al publicar los resultados.";
     return fail(msg);
