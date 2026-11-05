@@ -38,6 +38,7 @@ test("migraciones y permisos en PostgreSQL local", async (t) => {
     "202611020002_live_updates.sql",
     "202611020003_secure_directory_views.sql",
     "202611020004_consent.sql",
+    "202611050001_announcements.sql",
   ])
     await db.exec(
       await readFile(
@@ -947,6 +948,52 @@ test("migraciones y permisos en PostgreSQL local", async (t) => {
       assert.equal(logRows.length, 1);
       assert.equal(logRows[0].consent_version, "v1");
       assert.equal(logRows[0].user_agent, "Mozilla/5.0 Test");
+    },
+  );
+
+  await t.test(
+    "tablon de anuncios: permisos, insercion, lectura y cierre",
+    async () => {
+      const emp1 = await account("anunciante1");
+      const sid1 = await session(emp1);
+      const emp2 = await account("anunciante2");
+      const sid2 = await session(emp2);
+
+      let announcementId;
+
+      // Anunciante 1 crea un anuncio
+      await asUser(emp1, sid1, async () => {
+        const res = await db.query(
+          "insert into public.announcements (title, description, tone, creator_id) values ($1, $2, $3, $4) returning id",
+          ["¡SE ACABÓ EL CAFÉ!", "Por favor comprar más", "coffee", emp1],
+        );
+        announcementId = res.rows[0].id;
+        assert.ok(announcementId);
+      });
+
+      // Anunciante 2 puede leer los anuncios activos
+      await asUser(emp2, sid2, async () => {
+        const rows = (await db.query("select * from public.announcements where status = 'active'")).rows;
+        assert.equal(rows.length, 1);
+        assert.equal(rows[0].title, "¡SE ACABÓ EL CAFÉ!");
+        assert.equal(rows[0].tone, "coffee");
+
+        // Cualquier usuario activo puede cerrar el anuncio (marcar como resuelto)
+        await db.query(
+          "update public.announcements set status = 'closed', closed_by = $1, closed_at = now() where id = $2",
+          [emp2, announcementId],
+        );
+      });
+
+      // Verificamos que el anuncio ya no esté en los activos
+      await asUser(emp1, sid1, async () => {
+        const activeRows = (await db.query("select * from public.announcements where status = 'active'")).rows;
+        assert.equal(activeRows.length, 0);
+
+        const closedRows = (await db.query("select * from public.announcements where id = $1", [announcementId])).rows;
+        assert.equal(closedRows[0].status, "closed");
+        assert.equal(closedRows[0].closed_by, emp2);
+      });
     },
   );
 

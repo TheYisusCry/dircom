@@ -2,8 +2,9 @@
 
 import { useSyncExternalStore } from "react";
 import { IllustratedIcon } from "@/components/ui/icon";
+import { AnnouncementBoard } from "@/components/announcements/announcement-board";
 import { OFFICE_TIME_ZONE } from "@/lib/dates";
-import type { Employee } from "@/types";
+import type { Employee, Announcement } from "@/types";
 
 function currentGreeting() {
   const hour = Number(
@@ -28,7 +29,15 @@ function serverGreeting() {
 }
 
 /** Uses Bolivia's clock after hydration, while the session profile is still a fixture. */
-export function UserGreeting({ profile }: { profile: Pick<Employee, "name"> }) {
+export function UserGreeting({
+  profile,
+  announcements = [],
+  onOpenCreateAnnouncement,
+}: {
+  profile: Pick<Employee, "name">;
+  announcements?: readonly Announcement[];
+  onOpenCreateAnnouncement?: () => void;
+}) {
   const firstName = profile.name.trim().split(/\s+/)[0];
   const greeting = useSyncExternalStore(
     subscribeClock,
@@ -39,39 +48,28 @@ export function UserGreeting({ profile }: { profile: Pick<Employee, "name"> }) {
   return (
     <div
       id="inicio"
-      className="panel relative my-6 flex items-center justify-between gap-4 overflow-hidden border-forest/15 bg-mint px-5 py-6 sm:my-7 sm:px-7 sm:py-7"
+      className="panel relative my-6 overflow-hidden border-forest/15 bg-mint p-5 sm:my-7 sm:p-6"
     >
-      <div className="relative z-10">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-forest/10 bg-white/70 px-2.5 py-1 text-[10px] font-semibold text-forest-ink">
-          <span className="size-1.5 rounded-full bg-forest" />
-          Equipo DIRCOM
-        </span>
-        <h1 className="mt-3 text-[27px] leading-tight font-extrabold tracking-[-0.045em] text-forest-ink sm:text-[33px]">
-          {greeting}
-          {firstName ? `, ${firstName}` : ""}!{" "}
-          <IllustratedIcon name="sparkles" size={29} className="align-middle" />
-        </h1>
-        <p className="mt-2 max-w-xl text-xs leading-6 text-muted sm:text-sm">
-          Ponte al día con los cumpleaños, el reconocimiento semanal y los
-          planes del equipo.
-        </p>
-      </div>
-      <div
-        className="relative hidden h-28 w-32 shrink-0 items-center justify-center sm:flex"
-        aria-hidden="true"
-      >
-        <span className="absolute size-28 rounded-full border border-forest/10 bg-white/55" />
-        <IllustratedIcon
-          name="party"
-          size={60}
-          className="relative -rotate-12"
-        />
-        <IllustratedIcon
-          name="sparkles"
-          size={22}
-          className="absolute right-0 top-1"
-        />
-        <span className="absolute bottom-4 left-1 size-2 rounded-full bg-forest/30" />
+      <div className="grid gap-5 lg:grid-cols-2 lg:items-center">
+        {/* Columna 1: Bienvenida */}
+        <div className="relative z-10 flex flex-col justify-center">
+          <h1 className="text-[23px] sm:text-[27px] leading-tight font-extrabold tracking-[-0.04em] text-forest-ink">
+            {greeting}
+            {firstName ? `, ${firstName}` : ""}!{" "}
+            <IllustratedIcon name="sparkles" size={24} className="align-middle inline-block" />
+          </h1>
+          <p className="mt-1.5 max-w-md text-xs leading-5 text-muted sm:text-sm">
+            Ponte al día con los cumpleaños, el reconocimiento semanal y los planes del equipo.
+          </p>
+        </div>
+
+        {/* Columna 2: Tablón de Anuncios */}
+        <div className="relative z-10">
+          <AnnouncementBoard
+            announcements={announcements}
+            onOpenCreateModal={onOpenCreateAnnouncement}
+          />
+        </div>
       </div>
     </div>
   );

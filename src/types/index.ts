@@ -55,3 +55,11 @@ export interface Activity {
   messages: readonly ActivityMessage[];
   messageCount?: number;
 }
+
+export interface Announcement {
+  id: string;
+  title: string;
+  description: string | null;
+  tone: "urgent" | "coffee" | "general" | "celebration";
+  createdAt: string;
+}

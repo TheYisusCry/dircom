@@ -74,6 +74,19 @@ export type VotingVoteRow = {
 };
 export type ActivityCategory = "food" | "coffee" | "social";
 export type ActivityStatus = "open" | "closed";
+export type AnnouncementTone = "urgent" | "coffee" | "general" | "celebration";
+export type AnnouncementStatus = "active" | "closed";
+export type AnnouncementRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  tone: AnnouncementTone;
+  status: AnnouncementStatus;
+  creator_id: string;
+  closed_by: string | null;
+  created_at: string;
+  closed_at: string | null;
+};
 export type ActivityRow = {
   id: string;
   title: string;
@@ -213,6 +226,20 @@ export type Database = {
           {
             foreignKeyName: "coffee_deliveries_registered_by_fkey";
             columns: ["registered_by"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      announcements: {
+        Row: AnnouncementRow;
+        Insert: Omit<AnnouncementRow, "id" | "created_at" | "closed_at" | "closed_by" | "status"> &
+          Partial<Pick<AnnouncementRow, "id" | "created_at" | "closed_at" | "closed_by" | "status">>;
+        Update: Partial<AnnouncementRow>;
+        Relationships: [
+          {
+            foreignKeyName: "announcements_creator_id_fkey";
+            columns: ["creator_id"];
             referencedRelation: "profiles";
             referencedColumns: ["id"];
           },

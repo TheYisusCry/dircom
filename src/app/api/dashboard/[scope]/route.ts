@@ -7,7 +7,7 @@ export async function GET(_request: Request, context: { params: Promise<{ scope:
   const profile = await getSessionProfile();
   if (!profile) return Response.json({ error: "Sesión no autorizada." }, { status: 401, headers });
   const { scope } = await context.params;
-  if (!["activities", "voting", "birthdays", "coffee"].includes(scope)) {
+  if (!["activities", "voting", "birthdays", "coffee", "announcements"].includes(scope)) {
     return Response.json({ error: "Sección inválida." }, { status: 400, headers });
   }
   try {

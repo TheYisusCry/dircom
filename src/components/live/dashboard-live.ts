@@ -63,7 +63,7 @@ export function useDashboard(initialData: DashboardData) {
     const unsubscribe = onLiveChange(({ scope }) => schedule(scope));
     function resume() {
       if (document.visibilityState !== "visible") return;
-      for (const scope of ["birthdays", "coffee", "activities", "voting"] as const) {
+      for (const scope of ["birthdays", "coffee", "activities", "voting", "announcements"] as const) {
         if (Date.now() - (lastRead.get(scope) ?? 0) > 1000) schedule(scope);
       }
     }
@@ -74,14 +74,20 @@ export function useDashboard(initialData: DashboardData) {
       const now = Date.now();
       const today = getOfficeCurrentDate().todayIso;
       if (today !== day) { day = today; schedule("birthdays"); schedule("coffee"); }
-      const intervals = { birthdays: 300_000, coffee: 60_000, activities: connection === "connected" ? 300_000 : 15_000, voting: connection === "connected" ? 300_000 : 15_000 };
+      const intervals = {
+        birthdays: 300_000,
+        coffee: 60_000,
+        announcements: connection === "connected" ? 120_000 : 15_000,
+        activities: connection === "connected" ? 300_000 : 15_000,
+        voting: connection === "connected" ? 300_000 : 15_000,
+      };
       for (const scope of Object.keys(intervals) as DashboardScope[]) {
         if (now - (lastRead.get(scope) ?? now) >= intervals[scope]) schedule(scope);
       }
     }, 1000);
-    for (const scope of ["birthdays", "coffee", "activities", "voting"] as const) lastRead.set(scope, Date.now());
+    for (const scope of ["birthdays", "coffee", "activities", "voting", "announcements"] as const) lastRead.set(scope, Date.now());
     // Connect first, then read: don't lose changes between SSR and subscription.
-    schedule("activities"); schedule("voting");
+    schedule("activities"); schedule("voting"); schedule("announcements");
     window.addEventListener("focus", resume);
     window.addEventListener("online", resume);
     document.addEventListener("visibilitychange", resume);

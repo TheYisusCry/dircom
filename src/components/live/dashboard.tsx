@@ -1,7 +1,10 @@
 "use client";
+import { useState } from "react";
 import { IllustratedIcon, MessagesSquare } from "@/components/ui/icon";
 import { MainContainer } from "@/components/layout/main-container";
 import { UserGreeting } from "@/components/layout/user-greeting";
+import { FloatingActionButton } from "@/components/layout/floating-action-button";
+import { NewAnnouncementModal } from "@/components/announcements/new-announcement-modal";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { BirthdayFeatured } from "@/components/birthdays/birthday-featured";
@@ -19,6 +22,8 @@ import type { DashboardData } from "@/lib/dashboard";
 import type { Profile } from "@/types/database";
 
 export function Dashboard({ initialData, profile }: { initialData: DashboardData; profile: Profile }) {
+  const [announcementModalOpen, setAnnouncementModalOpen] = useState(false);
+  const [activityModalOpen, setActivityModalOpen] = useState(false);
   const { data, connection, stale } = useDashboard(initialData);
   const { birthday, upcomingBirthdays, allBirthdays, todayIso } = data.birthdays;
   const { activeRound, publishedRound, hasVoted, candidates } = data.voting;
@@ -26,6 +31,7 @@ export function Dashboard({ initialData, profile }: { initialData: DashboardData
   const activeRecognition = remaining > 0 ? null : data.voting.activeRecognition;
   const { realActivities } = data.activities;
   const { coffeeStatuses, coffeeLeaderboard, coffeeSummary } = data.coffee;
+  const announcements = data.announcements?.announcements ?? [];
   return (
     <>
       <CelebrationConfetti triggerKey={celebrationKey} />
@@ -33,6 +39,8 @@ export function Dashboard({ initialData, profile }: { initialData: DashboardData
         {(connection !== "connected" || stale) && <p role="status" className="mb-3 text-xs text-muted">{stale ? "Algunos datos no se pudieron actualizar. Reintentando…" : connection === "connecting" ? "Conectando actualizaciones en directo…" : "Reconectando actualizaciones. Los datos se comprueban periódicamente."}</p>}
         <UserGreeting
           profile={{ name: `${profile.first_name} ${profile.last_name}` }}
+          announcements={announcements}
+          onOpenCreateAnnouncement={() => setAnnouncementModalOpen(true)}
         />
         <section id="cumpleanos" aria-labelledby="birthday-heading">
           <SectionHeading
@@ -122,7 +130,10 @@ export function Dashboard({ initialData, profile }: { initialData: DashboardData
             subtitle="Pequeños planes, grandes momentos juntos."
             icon={<MessagesSquare size={19} />}
           >
-            <NewActivityPreview />
+            <NewActivityPreview
+              externalOpen={activityModalOpen}
+              onOpenChange={setActivityModalOpen}
+            />
           </SectionHeading>
           <ActivityBoard
             activities={realActivities}
@@ -138,6 +149,16 @@ export function Dashboard({ initialData, profile }: { initialData: DashboardData
           />
         </footer>
       </MainContainer>
+
+      <FloatingActionButton
+        onOpenAnnouncement={() => setAnnouncementModalOpen(true)}
+        onOpenActivity={() => setActivityModalOpen(true)}
+      />
+
+      <NewAnnouncementModal
+        open={announcementModalOpen}
+        onClose={() => setAnnouncementModalOpen(false)}
+      />
     </>
   );
 }

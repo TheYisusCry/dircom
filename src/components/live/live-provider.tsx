@@ -6,7 +6,7 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import { serverClockOffset } from "@/lib/live";
 
-export type LiveScope = "activities" | "voting" | "birthdays" | "coffee";
+export type LiveScope = "activities" | "voting" | "birthdays" | "coffee" | "announcements";
 export type LiveChange = { scope: LiveScope; activityId?: string };
 const CHANGE_EVENT = "dircom:change";
 export function announceChange(change: LiveChange) {

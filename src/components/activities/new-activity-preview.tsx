@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useCallback, useEffect, useState } from "react";
 import { announceChange } from "@/components/live/live-provider";
 import { Coffee, IllustratedIcon, Plus, Utensils } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
@@ -8,8 +8,23 @@ import { Modal } from "@/components/ui/modal";
 import { createActivityAction } from "@/app/actions/activities";
 import { INITIAL_ACTION, type ActivityCategory } from "@/types/database";
 
-export function NewActivityPreview() {
-  const [open, setOpen] = useState(false);
+export function NewActivityPreview({
+  externalOpen,
+  onOpenChange,
+}: {
+  externalOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+} = {}) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = useCallback(
+    (val: boolean) => {
+      setInternalOpen(val);
+      onOpenChange?.(val);
+    },
+    [onOpenChange],
+  );
+
   const [category, setCategory] = useState<ActivityCategory>("food");
   const [state, formAction, pending] = useActionState(createActivityAction, INITIAL_ACTION);
 
@@ -21,7 +36,7 @@ export function NewActivityPreview() {
       }, 700);
       return () => clearTimeout(timer);
     }
-  }, [state]);
+  }, [state, setOpen]);
 
   return (
     <>

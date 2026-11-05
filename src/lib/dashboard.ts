@@ -4,9 +4,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { calculateEmployeeCoffeeStatus, buildCoffeeLeaderboard, calculateCoffeeOfficeSummary } from "@/lib/coffee";
 import { celebrationRowToCelebration, getUpcomingBirthdays, getNextBirthday, getOfficeCurrentDate, profileToEmployee, profileToParticipant } from "@/lib/dates";
 import type { CoffeeDeliveryRow } from "@/types/coffee";
-import type { Activity, Employee, PodiumPlace, WeeklyRecognition } from "@/types";
+import type { Activity, Announcement, Employee, PodiumPlace, WeeklyRecognition } from "@/types";
 import type { Profile, VotingRoundRow } from "@/types/database";
-export type DashboardScope = "birthdays" | "voting" | "activities" | "coffee";
+export type DashboardScope = "birthdays" | "voting" | "activities" | "coffee" | "announcements";
 type RawProfile = {
   id?: string;
   first_name?: string;
@@ -52,6 +52,7 @@ export async function loadDashboard(profile: Profile, scope?: DashboardScope) {
     activitiesRes,
     coffeeMembersRes,
     coffeeDeliveriesRes,
+    announcementsRes,
   ] = await Promise.all([
     run("birthdays", () => supabase
       .from("employee_directory")
@@ -106,9 +107,14 @@ export async function loadDashboard(profile: Profile, scope?: DashboardScope) {
       .from("coffee_deliveries")
       .select("*")
       .order("delivery_date", { ascending: false })),
+    run("announcements", () => supabase
+      .from("announcements")
+      .select("id, title, description, tone, created_at")
+      .eq("status", "active")
+      .order("created_at", { ascending: false })),
   ]);
 
-  for (const result of [profilesRes, celebrationsRes, activeRoundRes, publishedRoundRes, candidatesRes, activitiesRes, coffeeMembersRes, coffeeDeliveriesRes]) {
+  for (const result of [profilesRes, celebrationsRes, activeRoundRes, publishedRoundRes, candidatesRes, activitiesRes, coffeeMembersRes, coffeeDeliveriesRes, announcementsRes]) {
     if (result.error) throw new Error("No se pudieron actualizar los datos del tablero.");
   }
 
@@ -236,12 +242,28 @@ export async function loadDashboard(profile: Profile, scope?: DashboardScope) {
   const coffeeLeaderboard = buildCoffeeLeaderboard(coffeeStatuses, rawCoffeeDeliveries);
   const coffeeSummary = calculateCoffeeOfficeSummary(coffeeStatuses, currentYear, currentMonth);
 
+  const rawAnnouncements = (announcementsRes.data ?? []) as Array<{
+    id: string;
+    title: string;
+    description: string | null;
+    tone: "urgent" | "coffee" | "general" | "celebration";
+    created_at: string;
+  }>;
+
+  const announcements: Announcement[] = rawAnnouncements.map((a) => ({
+    id: a.id,
+    title: a.title,
+    description: a.description,
+    tone: a.tone,
+    createdAt: a.created_at,
+  }));
 
   return {
     birthdays: { birthday, upcomingBirthdays, allBirthdays, todayIso },
     voting: { activeRound, publishedRound, hasVoted, candidates, activeRecognition, serverNow: Date.now() },
     activities: { realActivities },
     coffee: { coffeeStatuses, coffeeLeaderboard, coffeeSummary },
+    announcements: { announcements },
   };
 }
 export type DashboardData = Awaited<ReturnType<typeof loadDashboard>>;
