@@ -20,7 +20,7 @@ import type { Profile } from "@/types/database";
 
 export function Dashboard({ initialData, profile }: { initialData: DashboardData; profile: Profile }) {
   const { data, connection, stale } = useDashboard(initialData);
-  const { birthday, upcomingBirthdays, todayIso } = data.birthdays;
+  const { birthday, upcomingBirthdays, allBirthdays, todayIso } = data.birthdays;
   const { activeRound, publishedRound, hasVoted, candidates } = data.voting;
   const { remaining, celebrationKey } = useRevelation(publishedRound, data.voting.serverNow);
   const activeRecognition = remaining > 0 ? null : data.voting.activeRecognition;
@@ -58,6 +58,7 @@ export function Dashboard({ initialData, profile }: { initialData: DashboardData
           )}
           <UpcomingBirthdaysList
             birthdays={upcomingBirthdays}
+            allBirthdays={allBirthdays}
             todayIso={todayIso}
           />
         </section>

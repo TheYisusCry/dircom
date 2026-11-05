@@ -121,12 +121,12 @@ export function getNextBirthday(
   return { ...next, celebration };
 }
 
-/** Returns the upcoming birthdays in chronological order up to the specified limit. */
+/** Returns the upcoming birthdays in chronological order up to the specified limit (or all if omitted). */
 export function getUpcomingBirthdays(
   employees: readonly Employee[],
   celebrations: readonly BirthdayCelebration[],
   referenceDate: string,
-  limit = 3,
+  limit?: number,
 ): BirthdayPresentation[] {
   if (
     !/^\d{4}-\d{2}-\d{2}$/.test(referenceDate) ||
@@ -141,10 +141,11 @@ export function getUpcomingBirthdays(
       employee,
       nextBirthday: nextOccurrence(employee, referenceDate),
     }))
-    .sort((a, b) => a.nextBirthday.localeCompare(b.nextBirthday))
-    .slice(0, limit);
+    .sort((a, b) => a.nextBirthday.localeCompare(b.nextBirthday));
 
-  return occurrences.map((item) => {
+  const items = typeof limit === "number" ? occurrences.slice(0, limit) : occurrences;
+
+  return items.map((item) => {
     const celebration = celebrations.find(
       (event) =>
         event.employeeId === item.employee.id &&

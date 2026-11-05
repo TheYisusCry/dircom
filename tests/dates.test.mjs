@@ -57,6 +57,21 @@ test("getUpcomingBirthdays devuelve los próximos 3 cumpleaños en orden cronol�
   assert.equal(list[2].nextBirthday, "2026-12-10");
 });
 
+test("getUpcomingBirthdays sin límite devuelve todos los cumpleaños ordenados por proximidad", () => {
+  const emps = [
+    employee("Carlos", 10, 12),
+    employee("Mía", 18, 10),
+    employee("Ana", 5, 1),
+    employee("Pedro", 24, 11),
+  ];
+  const list = getUpcomingBirthdays(emps, [], "2026-10-13");
+  assert.equal(list.length, 4);
+  assert.equal(list[0].employee.id, "Mía");
+  assert.equal(list[1].employee.id, "Pedro");
+  assert.equal(list[2].employee.id, "Carlos");
+  assert.equal(list[3].employee.id, "Ana");
+});
+
 test("incluye un cumpleaños de hoy y mantiene el orden en un empate", () => {
   const result = getNextBirthday(
     [employee("Mía", 13, 10), employee("Pedro", 13, 10)],

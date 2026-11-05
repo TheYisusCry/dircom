@@ -123,6 +123,7 @@ export async function loadDashboard(profile: Profile, scope?: DashboardScope) {
   const { todayIso, currentMonth, currentYear } = getOfficeCurrentDate();
   const birthday = getNextBirthday(dbEmployees, dbCelebrations, todayIso);
   const upcomingBirthdays = getUpcomingBirthdays(dbEmployees, dbCelebrations, todayIso, 3);
+  const allBirthdays = getUpcomingBirthdays(dbEmployees, dbCelebrations, todayIso);
 
   // Voting state and recognition
   const activeRound = activeRoundRes.data as VotingRoundRow | null;
@@ -237,7 +238,7 @@ export async function loadDashboard(profile: Profile, scope?: DashboardScope) {
 
 
   return {
-    birthdays: { birthday, upcomingBirthdays, todayIso },
+    birthdays: { birthday, upcomingBirthdays, allBirthdays, todayIso },
     voting: { activeRound, publishedRound, hasVoted, candidates, activeRecognition, serverNow: Date.now() },
     activities: { realActivities },
     coffee: { coffeeStatuses, coffeeLeaderboard, coffeeSummary },

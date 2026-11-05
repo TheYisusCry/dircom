@@ -3,16 +3,25 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "@/components/ui/icon";
+import {
+  Menu,
+  X,
+  LayoutDashboard,
+  Cake,
+  Trophy,
+  Coffee,
+  MessagesSquare,
+} from "@/components/ui/icon";
 import { Avatar } from "@/components/ui/avatar";
 import { avatarUrl } from "@/lib/auth/validation";
 import type { Profile } from "@/types/database";
 
 const links = [
-  { href: "#inicio", label: "Inicio" },
-  { href: "#cumpleanos", label: "Cumpleaños" },
-  { href: "#destacado", label: "Empleado destacado" },
-  { href: "#actividades", label: "Actividades" },
+  { href: "#inicio", label: "Inicio", icon: LayoutDashboard },
+  { href: "#cumpleanos", label: "Cumpleaños", icon: Cake },
+  { href: "#destacado", label: "Empleado destacado", icon: Trophy },
+  { href: "#cafe", label: "Café", icon: Coffee },
+  { href: "#actividades", label: "Actividades", icon: MessagesSquare },
 ];
 
 export function Navigation({ profile }: { profile?: Profile }) {
@@ -20,6 +29,7 @@ export function Navigation({ profile }: { profile?: Profile }) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState("#inicio");
   const name = profile ? `${profile.first_name} ${profile.last_name}` : "";
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -47,13 +57,24 @@ export function Navigation({ profile }: { profile?: Profile }) {
       >
         {open ? <X size={22} /> : <Menu size={22} />}
       </button>
+
+      {open && (
+        <div
+          className="fixed inset-0 top-[72px] z-30 bg-ink/20 backdrop-blur-2xs lg:hidden"
+          onClick={() => setOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       <nav
         id="main-navigation"
         aria-label="Navegación principal"
         onKeyDown={(event) => {
           if (event.key === "Escape") setOpen(false);
         }}
-        className={`${open ? "flex" : "hidden"} absolute inset-x-0 top-full z-40 flex-col gap-1.5 border-b border-t border-line bg-white p-4 shadow-xl lg:static lg:z-auto lg:flex lg:flex-row lg:border-0 lg:p-0 lg:shadow-none`}
+        className={`${
+          open ? "flex" : "hidden"
+        } absolute inset-x-0 top-full z-40 flex-col gap-1.5 border-b border-t border-line bg-white p-4 shadow-xl lg:static lg:z-auto lg:flex lg:flex-row lg:border-0 lg:p-0 lg:shadow-none lg:gap-1`}
       >
         {profile && (
           <Link
@@ -78,7 +99,7 @@ export function Navigation({ profile }: { profile?: Profile }) {
             </span>
           </Link>
         )}
-        {links.map(({ href, label }) => (
+        {links.map(({ href, label, icon: Icon }) => (
           <a
             key={href}
             href={isDashboard ? href : `/${href}`}
@@ -89,9 +110,14 @@ export function Navigation({ profile }: { profile?: Profile }) {
               setActive(href);
               setOpen(false);
             }}
-            className={`rounded-lg px-3.5 py-3 text-[13px] font-semibold transition-colors ${active === href ? "bg-mint text-forest-ink" : "text-muted hover:bg-mist hover:text-ink"}`}
+            className={`flex items-center gap-2 rounded-lg px-3.5 py-3 text-[13px] font-semibold transition-colors lg:px-3 lg:py-2 ${
+              active === href
+                ? "bg-mint text-forest-ink"
+                : "text-muted hover:bg-mist hover:text-ink"
+            }`}
           >
-            {label}
+            <Icon size={16} className="shrink-0 lg:hidden xl:inline" aria-hidden="true" />
+            <span>{label}</span>
           </a>
         ))}
       </nav>

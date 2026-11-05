@@ -2,19 +2,25 @@
 
 import { useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
-import { Cake, CalendarDays, PartyPopper } from "@/components/ui/icon";
+import { ArrowRight, Cake, CalendarDays, PartyPopper } from "@/components/ui/icon";
 import { formatCalendarDate } from "@/lib/dates";
 import { BirthdayDetailModal } from "./birthday-detail-modal";
+import { AllBirthdaysModal } from "./all-birthdays-modal";
 import type { BirthdayPresentation } from "@/types";
 
 export function UpcomingBirthdaysList({
   birthdays,
+  allBirthdays,
   todayIso,
 }: {
   birthdays: readonly BirthdayPresentation[];
+  allBirthdays?: readonly BirthdayPresentation[];
   todayIso: string;
 }) {
   const [selectedBirthday, setSelectedBirthday] = useState<BirthdayPresentation | null>(null);
+  const [allModalOpen, setAllModalOpen] = useState(false);
+
+  const fullList = allBirthdays && allBirthdays.length > 0 ? allBirthdays : birthdays;
 
   if (birthdays.length === 0) {
     return null;
@@ -32,11 +38,15 @@ export function UpcomingBirthdaysList({
               Próximos cumpleaños
             </h4>
           </div>
-          <span className="rounded-full bg-mist px-2.5 py-1 text-[11px] font-semibold text-muted">
-            {birthdays.length === 1
-              ? "Próximo cumpleaños en agenda"
-              : `Próximos ${birthdays.length} en agenda`}
-          </span>
+          <button
+            type="button"
+            onClick={() => setAllModalOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-full border border-forest/30 bg-mint px-3 py-1.5 text-xs font-semibold text-forest-ink hover:bg-forest/15 transition-colors"
+          >
+            <CalendarDays size={14} />
+            <span>Ver todos los cumpleaños</span>
+            <ArrowRight size={13} />
+          </button>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
@@ -106,6 +116,14 @@ export function UpcomingBirthdaysList({
           })}
         </div>
       </div>
+
+      <AllBirthdaysModal
+        open={allModalOpen}
+        onClose={() => setAllModalOpen(false)}
+        birthdays={fullList}
+        todayIso={todayIso}
+        onSelectCelebration={(item) => setSelectedBirthday(item)}
+      />
 
       {selectedBirthday && (
         <BirthdayDetailModal
