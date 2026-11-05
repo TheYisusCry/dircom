@@ -39,6 +39,7 @@ test("migraciones y permisos en PostgreSQL local", async (t) => {
     "202611020003_secure_directory_views.sql",
     "202611020004_consent.sql",
     "202611050001_announcements.sql",
+    "202611050002_performance_indexes.sql",
   ])
     await db.exec(
       await readFile(
