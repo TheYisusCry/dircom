@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useState } from "react";
 import { announceChange } from "@/components/live/live-provider";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -28,17 +28,31 @@ export function VotingBallotModal({
   onClose: () => void;
 }) {
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
-  const [state, formAction, pending] = useActionState(castVoteAction, INITIAL_ACTION);
+  const [pending, setPending] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (state.status === "success") {
-      const timer = setTimeout(() => {
-        onClose();
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!selectedCandidateId) return;
+    setErrorMessage(null);
+    setPending(true);
+
+    try {
+      const formData = new FormData(event.currentTarget);
+      const result = await castVoteAction(INITIAL_ACTION, formData);
+
+      if (result.status === "error") {
+        setErrorMessage(result.message ?? "Error al registrar el voto.");
+        setPending(false);
+      } else {
         announceChange({ scope: "voting" });
-      }, 1000);
-      return () => clearTimeout(timer);
+        onClose();
+      }
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Error al registrar el voto.");
+      setPending(false);
     }
-  }, [state, onClose]);
+  };
 
   const selectedCandidate = candidates.find((c) => c.id === selectedCandidateId);
 
@@ -49,20 +63,16 @@ export function VotingBallotModal({
       title="¿Quién hizo la diferencia esta semana?"
       maxWidth="max-w-lg"
     >
-      <form action={formAction} className="space-y-4 p-4 sm:space-y-4 sm:p-5">
+      <form onSubmit={handleSubmit} className="space-y-4 p-4 sm:space-y-4 sm:p-5">
         <input type="hidden" name="round_id" value={round.id} />
         <input type="hidden" name="candidate_id" value={selectedCandidateId ?? ""} />
 
-        {state.message && (
+        {errorMessage && (
           <p
-            role={state.status === "error" ? "alert" : "status"}
-            className={`rounded-xl border p-3.5 text-sm leading-6 ${
-              state.status === "error"
-                ? "border-red-200 bg-red-50 text-red-800"
-                : "border-forest/20 bg-mint text-forest-ink"
-            }`}
+            role="alert"
+            className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-sm leading-6 text-red-800 font-semibold"
           >
-            {state.message}
+            {errorMessage}
           </p>
         )}
 

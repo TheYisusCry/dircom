@@ -16,4 +16,16 @@ create index if not exists activities_created_at_idx
 create index if not exists voting_ballots_cast_voter_round_idx
   on public.voting_ballots_cast (voter_id, round_id);
 
+-- Agregar anuncios a la publicacion en tiempo real de Supabase si existe
+do $$
+begin
+  if exists(select 1 from pg_publication where pubname = 'supabase_realtime') then
+    if not exists(select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'announcements') then
+      alter publication supabase_realtime add table public.announcements;
+    end if;
+  end if;
+end;
+$$;
+
 commit;

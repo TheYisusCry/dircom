@@ -74,12 +74,14 @@ export function LiveProvider({ children }: { children: ReactNode }) {
               announceChange({ scope: "activities", activityId: row.activity_id as string | undefined });
             })
             .on("postgres_changes", { event: "*", schema: "public", table: "voting_rounds" }, () => announceChange({ scope: "voting" }))
+            .on("postgres_changes", { event: "*", schema: "public", table: "announcements" }, () => announceChange({ scope: "announcements" }))
             .subscribe((status) => {
               if (disposed) return;
               setConnection(status === "SUBSCRIBED" ? "connected" : "disconnected");
               if (status === "SUBSCRIBED") {
                 announceChange({ scope: "activities" });
                 announceChange({ scope: "voting" });
+                announceChange({ scope: "announcements" });
               }
             });
         } else {

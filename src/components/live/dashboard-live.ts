@@ -77,14 +77,14 @@ export function useDashboard(initialData: DashboardData) {
       const intervals = {
         birthdays: 300_000,
         coffee: 60_000,
-        announcements: connection === "connected" ? 120_000 : 15_000,
+        announcements: connection === "connected" ? 300_000 : 15_000,
         activities: connection === "connected" ? 300_000 : 15_000,
         voting: connection === "connected" ? 300_000 : 15_000,
       };
       for (const scope of Object.keys(intervals) as DashboardScope[]) {
         if (now - (lastRead.get(scope) ?? now) >= intervals[scope]) schedule(scope);
       }
-    }, 1000);
+    }, 5000);
     for (const scope of ["birthdays", "coffee", "activities", "voting", "announcements"] as const) lastRead.set(scope, Date.now());
     // Connect first, then read: don't lose changes between SSR and subscription.
     schedule("activities"); schedule("voting"); schedule("announcements");
@@ -101,7 +101,7 @@ export function useDashboard(initialData: DashboardData) {
       window.removeEventListener("online", resume);
       document.removeEventListener("visibilitychange", resume);
     };
-  }, [connection, router, initialData]);
+  }, [connection, router]);
   return { data: snapshot.data, connection, stale: failed.length > 0 };
 }
 
