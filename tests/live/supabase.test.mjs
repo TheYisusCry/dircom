@@ -305,7 +305,8 @@ test(
           const photo = await avatarResponse(fixtureId);
           assert.equal(photo.status, 200);
           assert.equal(photo.headers.get("content-type"), "image/webp");
-          assert.match(photo.headers.get("cache-control"), /no-store/);
+          assert.match(photo.headers.get("cache-control"), /private/);
+          assert.ok(photo.headers.get("etag"));
           assert.ok((await photo.arrayBuffer()).byteLength > 0);
           assert.equal((await avatarResponse(fixtureId, false)).status, 401);
           assert.ok(

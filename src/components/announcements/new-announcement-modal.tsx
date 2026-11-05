@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { announceChange } from "@/components/live/live-provider";
@@ -45,31 +45,45 @@ export function NewAnnouncementModal({
   onClose: () => void;
 }) {
   const [tone, setTone] = useState<AnnouncementTone>("general");
-  const [state, formAction, pending] = useActionState(createAnnouncementAction, INITIAL_ACTION);
+  const [pending, setPending] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (state.status === "success") {
-      announceChange({ scope: "announcements" });
-      const timer = setTimeout(() => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrorMessage(null);
+    setPending(true);
+
+    try {
+      const formData = new FormData(event.currentTarget);
+      const result = await createAnnouncementAction(INITIAL_ACTION, formData);
+
+      if (result.status === "error") {
+        setErrorMessage(result.message ?? "Error al publicar el anuncio.");
+        setPending(false);
+      } else {
+        announceChange({ scope: "announcements" });
         onClose();
-      }, 600);
-      return () => clearTimeout(timer);
+      }
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Error al publicar el anuncio.");
+      setPending(false);
     }
-  }, [state, onClose]);
+  };
 
   return (
-    <Modal open={open} onClose={onClose} title="Publicar un anuncio en el tablón" maxWidth="max-w-lg">
-      <form action={formAction} className="space-y-4 p-5 sm:space-y-5 sm:p-6">
-        {state.message && (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Publicar un anuncio en el tablón"
+      maxWidth="max-w-lg"
+    >
+      <form onSubmit={handleSubmit} className="space-y-4 p-5 sm:space-y-5 sm:p-6">
+        {errorMessage && (
           <p
-            role={state.status === "error" ? "alert" : "status"}
-            className={`rounded-xl border p-3.5 text-xs font-semibold ${
-              state.status === "error"
-                ? "border-red-200 bg-red-50 text-red-800"
-                : "border-forest/20 bg-mint text-forest-ink"
-            }`}
+            role="alert"
+            className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs font-semibold text-red-800"
           >
-            {state.message}
+            {errorMessage}
           </p>
         )}
 

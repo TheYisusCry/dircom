@@ -30,13 +30,11 @@ export function NewActivityPreview({
 
   useEffect(() => {
     if (state.status === "success") {
-      const timer = setTimeout(() => {
-        setOpen(false);
-        announceChange({ scope: "activities" });
-      }, 700);
+      announceChange({ scope: "activities" });
+      const timer = setTimeout(() => setOpen(false), 0);
       return () => clearTimeout(timer);
     }
-  }, [state, setOpen]);
+  }, [state.status, setOpen]);
 
   return (
     <>

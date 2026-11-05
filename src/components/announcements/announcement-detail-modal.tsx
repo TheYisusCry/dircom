@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Clock3 } from "@/components/ui/icon";
@@ -62,32 +62,41 @@ export function AnnouncementDetailModal({
   open: boolean;
   onClose: () => void;
 }) {
-  const [state, formAction, pending] = useActionState(closeAnnouncementAction, INITIAL_ACTION);
+  const [pending, setPending] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const config = toneConfig[announcement.tone] ?? toneConfig.general;
 
-  useEffect(() => {
-    if (state.status === "success") {
-      announceChange({ scope: "announcements" });
-      const timer = setTimeout(() => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrorMessage(null);
+    setPending(true);
+
+    try {
+      const formData = new FormData(event.currentTarget);
+      const result = await closeAnnouncementAction(INITIAL_ACTION, formData);
+
+      if (result.status === "error") {
+        setErrorMessage(result.message ?? "Error al cerrar el anuncio.");
+        setPending(false);
+      } else {
+        announceChange({ scope: "announcements" });
         onClose();
-      }, 500);
-      return () => clearTimeout(timer);
+      }
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Error al cerrar el anuncio.");
+      setPending(false);
     }
-  }, [state, onClose]);
+  };
 
   return (
     <Modal open={open} onClose={onClose} title="Detalle del anuncio" maxWidth="max-w-lg">
       <div className="space-y-5 p-5 sm:p-6">
-        {state.message && (
+        {errorMessage && (
           <p
-            role={state.status === "error" ? "alert" : "status"}
-            className={`rounded-xl border p-3.5 text-xs font-semibold ${
-              state.status === "error"
-                ? "border-red-200 bg-red-50 text-red-800"
-                : "border-forest/20 bg-mint text-forest-ink"
-            }`}
+            role="alert"
+            className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs font-semibold text-red-800"
           >
-            {state.message}
+            {errorMessage}
           </p>
         )}
 
@@ -121,7 +130,7 @@ export function AnnouncementDetailModal({
           )}
         </div>
 
-        <form action={formAction} className="pt-2">
+        <form onSubmit={handleSubmit} className="pt-2">
           <input type="hidden" name="announcement_id" value={announcement.id} />
           <Button
             type="submit"

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { IllustratedIcon, MessagesSquare } from "@/components/ui/icon";
 import { MainContainer } from "@/components/layout/main-container";
 import { UserGreeting } from "@/components/layout/user-greeting";
@@ -24,6 +24,10 @@ import type { Profile } from "@/types/database";
 export function Dashboard({ initialData, profile }: { initialData: DashboardData; profile: Profile }) {
   const [announcementModalOpen, setAnnouncementModalOpen] = useState(false);
   const [activityModalOpen, setActivityModalOpen] = useState(false);
+
+  const handleOpenAnnouncement = useCallback(() => setAnnouncementModalOpen(true), []);
+  const handleCloseAnnouncement = useCallback(() => setAnnouncementModalOpen(false), []);
+  const handleOpenActivity = useCallback(() => setActivityModalOpen(true), []);
   const { data, connection, stale } = useDashboard(initialData);
   const { birthday, upcomingBirthdays, allBirthdays, todayIso } = data.birthdays;
   const { activeRound, publishedRound, hasVoted, candidates } = data.voting;
@@ -40,7 +44,7 @@ export function Dashboard({ initialData, profile }: { initialData: DashboardData
         <UserGreeting
           profile={{ name: `${profile.first_name} ${profile.last_name}` }}
           announcements={announcements}
-          onOpenCreateAnnouncement={() => setAnnouncementModalOpen(true)}
+          onOpenCreateAnnouncement={handleOpenAnnouncement}
         />
         <section id="cumpleanos" aria-labelledby="birthday-heading">
           <SectionHeading
@@ -151,14 +155,16 @@ export function Dashboard({ initialData, profile }: { initialData: DashboardData
       </MainContainer>
 
       <FloatingActionButton
-        onOpenAnnouncement={() => setAnnouncementModalOpen(true)}
-        onOpenActivity={() => setActivityModalOpen(true)}
+        onOpenAnnouncement={handleOpenAnnouncement}
+        onOpenActivity={handleOpenActivity}
       />
 
-      <NewAnnouncementModal
-        open={announcementModalOpen}
-        onClose={() => setAnnouncementModalOpen(false)}
-      />
+      {announcementModalOpen && (
+        <NewAnnouncementModal
+          open={announcementModalOpen}
+          onClose={handleCloseAnnouncement}
+        />
+      )}
     </>
   );
 }

@@ -9,7 +9,10 @@ import {
 import type { Database } from "@/types/database";
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
-  response.headers.set("Cache-Control", "private, no-store");
+  const isAvatar = request.nextUrl.pathname.startsWith("/api/avatars/");
+  if (!isAvatar) {
+    response.headers.set("Cache-Control", "private, no-store");
+  }
   const isLogin = request.nextUrl.pathname === "/login";
   const deny = () => {
     const result = request.nextUrl.pathname.startsWith("/api/")
@@ -28,7 +31,9 @@ export async function proxy(request: NextRequest) {
       setAll: (items) => {
         items.forEach(({ name, value }) => request.cookies.set(name, value));
         response = NextResponse.next({ request });
-        response.headers.set("Cache-Control", "private, no-store");
+        if (!isAvatar) {
+          response.headers.set("Cache-Control", "private, no-store");
+        }
         items.forEach(({ name, value, options }) =>
           response.cookies.set(name, value, {
             ...options,
