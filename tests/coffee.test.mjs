@@ -2,9 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   buildCoffeeLeaderboard,
+  calculateAllEmployeeCoffeeStatuses,
   calculateCoffeeOfficeSummary,
   calculateEmployeeCoffeeStatus,
   getRequiredMonths,
+  indexCoffeeDeliveries,
 } from "../src/lib/coffee.ts";
 
 test("getRequiredMonths calcula correctamente los meses exigidos", () => {
@@ -188,4 +190,67 @@ test("calculateCoffeeOfficeSummary resume métricas de la oficina", () => {
   assert.equal(summary.officeTotalPackages, 7);
   assert.equal(summary.progressPercentage, 50);
   assert.equal(summary.currentMonthLabel, "Noviembre 2026");
+});
+
+test("calculateAllEmployeeCoffeeStatuses procesa en lote O(E + D) con resultados identicos", () => {
+  const employees = [
+    {
+      id: "emp-1",
+      first_name: "Ana",
+      last_name: "Silva",
+      created_at: "2026-10-01T00:00:00Z",
+    },
+    {
+      id: "emp-2",
+      first_name: "Beto",
+      last_name: "Ruiz",
+      created_at: "2026-11-01T00:00:00Z",
+    },
+  ];
+
+  const deliveries = [
+    {
+      id: "d1",
+      employee_id: "emp-1",
+      quantity: 1,
+      delivery_date: "2026-11-02",
+      note: null,
+      registered_by: "admin",
+      created_at: "2026-11-02T10:00:00Z",
+    },
+    {
+      id: "d2",
+      employee_id: "emp-1",
+      quantity: 2,
+      delivery_date: "2026-11-15",
+      note: null,
+      registered_by: "admin",
+      created_at: "2026-11-15T10:00:00Z",
+    },
+    {
+      id: "d3",
+      employee_id: "emp-2",
+      quantity: 1,
+      delivery_date: "2026-11-10",
+      note: null,
+      registered_by: "admin",
+      created_at: "2026-11-10T10:00:00Z",
+    },
+  ];
+
+  const summaryMap = indexCoffeeDeliveries(deliveries, 2026, 11);
+  assert.equal(summaryMap.size, 2);
+  assert.equal(summaryMap.get("emp-1")?.totalDelivered, 3);
+  assert.equal(summaryMap.get("emp-2")?.totalDelivered, 1);
+
+  const batchResults = calculateAllEmployeeCoffeeStatuses(employees, deliveries, 2026, 11);
+  const individual1 = calculateEmployeeCoffeeStatus(employees[0], deliveries, 2026, 11);
+  const individual2 = calculateEmployeeCoffeeStatus(employees[1], deliveries, 2026, 11);
+
+  assert.deepEqual(batchResults[0], individual1);
+  assert.deepEqual(batchResults[1], individual2);
+  assert.equal(batchResults[0].lastDeliveryDate, "2026-11-15");
+  assert.equal(batchResults[0].totalDelivered, 3);
+  assert.equal(batchResults[1].lastDeliveryDate, "2026-11-10");
+  assert.equal(batchResults[1].totalDelivered, 1);
 });

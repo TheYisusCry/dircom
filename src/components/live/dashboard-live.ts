@@ -11,6 +11,10 @@ import { onLiveChange, useLive } from "./live-provider";
 export function useDashboard(initialData: DashboardData) {
   const router = useRouter();
   const { connection } = useLive();
+  const connectionRef = useRef(connection);
+  useEffect(() => {
+    connectionRef.current = connection;
+  }, [connection]);
   const [failed, setFailed] = useState<DashboardScope[]>([]);
   const [snapshot, setSnapshot] = useState({ source: initialData, data: initialData });
   if (snapshot.source !== initialData) setSnapshot({ source: initialData, data: initialData });
@@ -74,12 +78,13 @@ export function useDashboard(initialData: DashboardData) {
       const now = Date.now();
       const today = getOfficeCurrentDate().todayIso;
       if (today !== day) { day = today; schedule("birthdays"); schedule("coffee"); }
+      const isConnected = connectionRef.current === "connected";
       const intervals = {
         birthdays: 300_000,
-        coffee: 60_000,
-        announcements: connection === "connected" ? 300_000 : 15_000,
-        activities: connection === "connected" ? 300_000 : 15_000,
-        voting: connection === "connected" ? 300_000 : 15_000,
+        coffee: isConnected ? 300_000 : 15_000,
+        announcements: isConnected ? 300_000 : 15_000,
+        activities: isConnected ? 300_000 : 15_000,
+        voting: isConnected ? 300_000 : 15_000,
       };
       for (const scope of Object.keys(intervals) as DashboardScope[]) {
         if (now - (lastRead.get(scope) ?? now) >= intervals[scope]) schedule(scope);
@@ -101,7 +106,7 @@ export function useDashboard(initialData: DashboardData) {
       window.removeEventListener("online", resume);
       document.removeEventListener("visibilitychange", resume);
     };
-  }, [connection, router]);
+  }, [router]);
   return { data: snapshot.data, connection, stale: failed.length > 0 };
 }
 

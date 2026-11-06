@@ -2,7 +2,7 @@ import "server-only";
 import { createSessionClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
-  calculateEmployeeCoffeeStatus,
+  calculateAllEmployeeCoffeeStatuses,
   buildCoffeeLeaderboard,
   calculateCoffeeOfficeSummary,
 } from "@/lib/coffee";
@@ -150,7 +150,8 @@ export async function loadDashboard(profile: Profile, scope?: DashboardScope) {
         .order("created_at", { ascending: false })
         .order("created_at", { referencedTable: "messages", ascending: false })
         .order("id", { referencedTable: "messages", ascending: false })
-        .limit(3, { referencedTable: "messages" }),
+        .limit(3, { referencedTable: "messages" })
+        .limit(20),
     ),
     run("coffee", () =>
       directory
@@ -161,7 +162,7 @@ export async function loadDashboard(profile: Profile, scope?: DashboardScope) {
     run("coffee", () =>
       supabase
         .from("coffee_deliveries")
-        .select("*")
+        .select("id, employee_id, quantity, delivery_date")
         .order("delivery_date", { ascending: false }),
     ),
     run("announcements", () =>
@@ -341,13 +342,11 @@ export async function loadDashboard(profile: Profile, scope?: DashboardScope) {
     const rawCoffeeDeliveries =
       (coffeeDeliveriesRes.data ?? []) as CoffeeDeliveryRow[];
 
-    coffeeStatuses = rawCoffeeMembers.map((emp) =>
-      calculateEmployeeCoffeeStatus(
-        emp,
-        rawCoffeeDeliveries,
-        currentYear,
-        currentMonth,
-      ),
+    coffeeStatuses = calculateAllEmployeeCoffeeStatuses(
+      rawCoffeeMembers,
+      rawCoffeeDeliveries,
+      currentYear,
+      currentMonth,
     );
     coffeeLeaderboard = buildCoffeeLeaderboard(
       coffeeStatuses,

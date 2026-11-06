@@ -75,6 +75,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
             })
             .on("postgres_changes", { event: "*", schema: "public", table: "voting_rounds" }, () => announceChange({ scope: "voting" }))
             .on("postgres_changes", { event: "*", schema: "public", table: "announcements" }, () => announceChange({ scope: "announcements" }))
+            .on("postgres_changes", { event: "*", schema: "public", table: "coffee_deliveries" }, () => announceChange({ scope: "coffee" }))
             .subscribe((status) => {
               if (disposed) return;
               setConnection(status === "SUBSCRIBED" ? "connected" : "disconnected");
@@ -82,6 +83,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
                 announceChange({ scope: "activities" });
                 announceChange({ scope: "voting" });
                 announceChange({ scope: "announcements" });
+                announceChange({ scope: "coffee" });
               }
             });
         } else {

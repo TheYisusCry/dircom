@@ -16,14 +16,17 @@ create index if not exists activities_created_at_idx
 create index if not exists voting_ballots_cast_voter_round_idx
   on public.voting_ballots_cast (voter_id, round_id);
 
--- Agregar anuncios a la publicacion en tiempo real de Supabase si existe
+-- Agregar anuncios y entregas de cafe a la publicacion en tiempo real de Supabase si existe
 do $$
+declare v_table text;
 begin
   if exists(select 1 from pg_publication where pubname = 'supabase_realtime') then
-    if not exists(select 1 from pg_publication_tables
-      where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'announcements') then
-      alter publication supabase_realtime add table public.announcements;
-    end if;
+    foreach v_table in array array['announcements', 'coffee_deliveries'] loop
+      if not exists(select 1 from pg_publication_tables
+        where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = v_table) then
+        execute format('alter publication supabase_realtime add table public.%I', v_table);
+      end if;
+    end loop;
   end if;
 end;
 $$;

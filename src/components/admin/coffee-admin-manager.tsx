@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { announceChange } from "@/components/live/live-provider";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { FormFeedback } from "@/components/ui/form-feedback";
@@ -43,6 +44,7 @@ export function CoffeeAdminManager({
         setRegisterModalOpen(false);
         setNote("");
         setQuantity(1);
+        announceChange({ scope: "coffee" });
       }
       return res;
     },
@@ -53,6 +55,12 @@ export function CoffeeAdminManager({
     deleteCoffeeDeliveryAction,
     INITIAL_ACTION,
   );
+
+  useEffect(() => {
+    if (deleteState.status === "success") {
+      announceChange({ scope: "coffee" });
+    }
+  }, [deleteState.status]);
 
   const openRegisterModal = (empId?: string) => {
     setSelectedEmployeeId(empId ?? statuses[0]?.employeeId ?? "");
